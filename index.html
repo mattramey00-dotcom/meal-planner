@@ -512,8 +512,9 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 @media(max-width:768px){
   .app{padding:12px}
   .header{flex-direction:column;gap:14px;text-align:center;padding:14px 0 20px}
-  .nav{width:100%;justify-content:center;flex-wrap:wrap}
-  .nav-btn{padding:8px 14px;font-size:12px}
+  .nav{width:100%;justify-content:center;flex-wrap:wrap;gap:6px;padding:6px;background:var(--surface2);border-radius:12px}
+  .nav-btn{padding:12px 20px;font-size:14px;font-weight:600;border-radius:8px;flex:1;text-align:center;min-height:44px;border:1.5px solid transparent}
+  .nav-btn.active{border-color:var(--accent);background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.1)}
   .week-grid{grid-template-columns:1fr;gap:16px}
   .day-header{text-align:left;padding:8px 12px}
   .meal-slot{padding:10px 12px}
@@ -572,6 +573,8 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
       <button class="btn btn-secondary" onclick="openBulkImport()">Bulk Import</button>
       <button id="saveBtn_cookbook" class="btn btn-primary btn-sm" onclick="syncSectionToCloud('cookbook')" 
               style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Save to Cloud</button>
+      <button id="undoBtn_cookbook" class="btn btn-secondary btn-sm" onclick="revertSection('cookbook')" 
+              style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Undo</button>
     </div>
     <div class="filter-row" id="filterRow"></div>
     <div id="cookbookGrid"></div>
@@ -587,6 +590,8 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
         <button class="btn btn-sm btn-ghost" onclick="openBlockedPairings()" title="Manage blocked pairings">Blocked Pairings</button>
         <button id="saveBtn_planner" class="btn btn-primary btn-sm" onclick="syncSectionToCloud('planner')" 
                 style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Save to Cloud</button>
+        <button id="undoBtn_planner" class="btn btn-secondary btn-sm" onclick="revertSection('planner')" 
+                style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Undo</button>
       </div>
     </div>
 
@@ -639,6 +644,8 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
         <button class="btn btn-secondary" onclick="copyGroceryList()">Copy List</button>
         <button id="saveBtn_grocery" class="btn btn-primary btn-sm" onclick="syncSectionToCloud('grocery')" 
                 style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Save to Cloud</button>
+        <button id="undoBtn_grocery" class="btn btn-secondary btn-sm" onclick="revertSection('grocery')" 
+                style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Undo</button>
       </div>
     </div>
     
@@ -1279,6 +1286,7 @@ function syncToCloud() {
 function updateSectionSaveButtons() {
   ['cookbook', 'planner', 'grocery'].forEach(section => {
     const btn = document.getElementById('saveBtn_' + section);
+    const undoBtn = document.getElementById('undoBtn_' + section);
     if (btn) {
       if (unsavedSections.has(section)) {
         btn.style.display = 'inline-flex';
@@ -1288,18 +1296,40 @@ function updateSectionSaveButtons() {
         btn.style.display = 'none';
       }
     }
+    if (undoBtn) {
+      undoBtn.style.display = unsavedSections.has(section) ? 'inline-flex' : 'none';
+    }
   });
   
-  // Also update the global indicator
   if (unsavedSections.size > 0) {
     updateSyncIndicator('unsaved');
   } else if (firebaseReady) {
     updateSyncIndicator('synced');
   }
   
-  // Hide global save button — we use per-section now
   const globalBtn = document.getElementById('cloudSaveBtn');
   if (globalBtn) globalBtn.style.display = 'none';
+}
+
+function revertSection(section) {
+  if (!firebaseReady || !db) {
+    alert('Cloud sync is not configured — nothing to revert to.');
+    return;
+  }
+  db.ref('mealPlanner/' + section).once('value', (snapshot) => {
+    const remoteData = snapshot.val();
+    if (remoteData) {
+      syncPaused = true;
+      applySectionData(section, remoteData);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      unsavedSections.delete(section);
+      updateSectionSaveButtons();
+      renderAll();
+      syncPaused = false;
+    } else {
+      alert('No cloud data found for ' + section + '. Nothing to revert to.');
+    }
+  });
 }
 
 // ============================================================
@@ -4545,56 +4575,4 @@ function processImport(jsonString) {
     if (importedState.groceryChecked) state.groceryChecked = importedState.groceryChecked;
     if (importedState.householdItems) state.householdItems = importedState.householdItems;
     if (importedState.miscFoodItems) state.miscFoodItems = importedState.miscFoodItems;
-    if (importedState.blockedPairings) state.blockedPairings = importedState.blockedPairings;
-    if (importedState.purchaseHistory) state.purchaseHistory = importedState.purchaseHistory;
-    
-    alert(`Merged ${newMeals.length} new meals into your cookbook (${newMeals.length} added, ${importedState.meals.length - newMeals.length} already existed).`);
-  } else {
-    // Full replace
-    Object.assign(state, importedState);
-    alert(`Data imported successfully. ${mealCount} meals loaded.`);
-  }
-  
-  saveState();
-  closeModal();
-  renderCookbook();
-}
-
-// ============================================================
-//  THEME
-// ============================================================
-function toggleTheme() {
-  const html = document.documentElement;
-  const current = html.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('mealPlannerTheme', next);
-}
-
-function initTheme() {
-  const saved = localStorage.getItem('mealPlannerTheme');
-  if (saved) {
-    document.documentElement.setAttribute('data-theme', saved);
-  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.setAttribute('data-theme', 'dark');
-  }
-}
-initTheme();
-
-// ============================================================
-//  INIT
-// ============================================================
-initFirebase();
-showSetupScreen();
-if (!document.getElementById('setupScreen')) renderCookbook();
-cleanPurchaseHistory();
-
-// Re-render on resize for mobile/desktop planner switch
-window.addEventListener('resize', () => {
-  if (document.getElementById('panel-planner').classList.contains('active')) {
-    renderPlanner();
-  }
-});
-</script>
-</body>
-</html>
+    if (importedState.blockedPairings) state.blockedPairings = importedState.blockedPairing
