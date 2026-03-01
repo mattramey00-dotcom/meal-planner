@@ -987,12 +987,16 @@ function initFirebase() {
       if (remoteData && remoteData._lastModified) {
         const localModified = state._lastModified || 0;
         if (remoteData._lastModified > localModified) {
-          syncPaused = true;
-          state = fixFirebaseArrays(remoteData);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-          renderAll();
-          updateSyncIndicator('synced');
-          syncPaused = false;
+          if (hasUnsavedChanges) {
+            showRemoteUpdateBanner(remoteData);
+          } else {
+            syncPaused = true;
+            state = fixFirebaseArrays(remoteData);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            renderAll();
+            updateSyncIndicator('synced');
+            syncPaused = false;
+          }
         }
       }
     });
@@ -1011,6 +1015,46 @@ function initFirebase() {
     console.error('Firebase init failed:', e);
     updateSyncIndicator('error');
   }
+}
+
+function showRemoteUpdateBanner(remoteData) {
+  window._pendingRemoteData = remoteData;
+  
+  let banner = document.getElementById('remoteBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'remoteBanner';
+    banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--accent);border-radius:10px;padding:12px 18px;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:10000;display:flex;align-items:center;gap:12px;font-size:12px;max-width:420px';
+    document.body.appendChild(banner);
+  }
+  banner.innerHTML = `
+    <div style="flex:1">
+      <div style="font-weight:600;margin-bottom:2px">Changes from another device</div>
+      <div style="color:var(--text3);font-size:11px">Someone updated the planner. Pull their changes or keep yours?</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="pullRemoteChanges()" style="white-space:nowrap">Pull Changes</button>
+    <button class="btn btn-secondary btn-sm" onclick="dismissRemoteBanner()" style="white-space:nowrap">Keep Mine</button>
+  `;
+}
+
+function pullRemoteChanges() {
+  if (window._pendingRemoteData) {
+    syncPaused = true;
+    state = fixFirebaseArrays(window._pendingRemoteData);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    hasUnsavedChanges = false;
+    renderAll();
+    updateSyncIndicator('synced');
+    syncPaused = false;
+    window._pendingRemoteData = null;
+  }
+  dismissRemoteBanner();
+}
+
+function dismissRemoteBanner() {
+  const banner = document.getElementById('remoteBanner');
+  if (banner) banner.remove();
+  window._pendingRemoteData = null;
 }
 
 function renderAll() {
@@ -1175,6 +1219,10 @@ function setMealTypeFilter(mt) {
 }
 
 function renderCookbook() {
+  // Ensure meals is always an array
+  if (state.meals && !Array.isArray(state.meals)) state.meals = Object.values(state.meals);
+  if (!state.meals) state.meals = [];
+  
   renderFilterRow();
   const grid = document.getElementById('cookbookGrid');
   const search = (document.getElementById('searchMeals')?.value || '').toLowerCase();
@@ -1401,6 +1449,11 @@ let dragMealId = null;
 let dragSource = null;
 
 function renderPlanner() {
+  // Ensure meals is always an array (Firebase can corrupt it to an object)
+  if (state.meals && !Array.isArray(state.meals)) state.meals = Object.values(state.meals);
+  if (!state.meals) state.meals = [];
+  if (!state.weekPlan) state.weekPlan = {};
+  
   const today = new Date();
   const todayDay = today.getDay();
   const dayMap = [0,1,2,3,4,5,6]; // JS getDay: 0=Sun,1=Mon,...6=Sat — matches our DAYS array now
@@ -1688,6 +1741,8 @@ function assignSlot(key, mealId) {
     state.weekPlan[key + '_side'] = meal.defaultSide;
   }
   // Track in history
+  if (!state.history) state.history = [];
+  if (!Array.isArray(state.history)) state.history = Object.values(state.history);
   if (!state.history.includes(mealId)) state.history.push(mealId);
   if (state.history.length > 50) state.history = state.history.slice(-50);
   saveState();
@@ -4291,4 +4346,123 @@ function importFromFile(event) {
   if (!file) return;
   
   const reader = new FileReader();
- 
+  reader.onload = (e) => {
+    processImport(e.target.result);
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function importFromPaste() {
+  const text = document.getElementById('importPasteBox')?.value?.trim();
+  if (!text) {
+    alert('Paste your exported data first.');
+    return;
+  }
+  processImport(text);
+}
+
+function processImport(jsonString) {
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonString);
+  } catch(e) {
+    alert('Invalid data format. Make sure you exported correctly.');
+    return;
+  }
+  
+  // Support both wrapped format and raw state
+  const importedState = parsed.state || parsed;
+  
+  // Validate it looks like meal planner data
+  if (!importedState.meals && !importedState.weekPlan) {
+    alert('This doesn\'t look like meal planner data. Make sure you\'re importing the right file.');
+    return;
+  }
+  
+  const mealCount = importedState.meals ? importedState.meals.length : 0;
+  const exportDate = parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : 'Unknown';
+  
+  const mode = confirm(
+    `Found ${mealCount} meals from ${exportDate}.\n\n` +
+    `OK = Replace all current data\n` +
+    `Cancel = Cancel import`
+  );
+  
+  if (!mode) return;
+  
+  // Merge option — ask if they want to merge cookbooks
+  let doMerge = false;
+  if (state.meals && state.meals.length > 0 && importedState.meals && importedState.meals.length > 0) {
+    doMerge = confirm(
+      'You have existing meals. Would you like to MERGE (keep both)?\n\n' +
+      'OK = Merge cookbooks (keep your meals + add imported ones)\n' +
+      'Cancel = Full replace (overwrite everything)'
+    );
+  }
+  
+  if (doMerge) {
+    // Merge: add imported meals that don't already exist
+    const existingNames = new Set(state.meals.map(m => m.name.toLowerCase()));
+    const newMeals = (importedState.meals || []).filter(m => !existingNames.has(m.name.toLowerCase()));
+    state.meals = [...state.meals, ...newMeals];
+    
+    // Take the imported planner, grocery, etc.
+    if (importedState.weekPlan) state.weekPlan = importedState.weekPlan;
+    if (importedState.groceryList) state.groceryList = importedState.groceryList;
+    if (importedState.groceryChecked) state.groceryChecked = importedState.groceryChecked;
+    if (importedState.householdItems) state.householdItems = importedState.householdItems;
+    if (importedState.miscFoodItems) state.miscFoodItems = importedState.miscFoodItems;
+    if (importedState.blockedPairings) state.blockedPairings = importedState.blockedPairings;
+    if (importedState.purchaseHistory) state.purchaseHistory = importedState.purchaseHistory;
+    
+    alert(`Merged ${newMeals.length} new meals into your cookbook (${newMeals.length} added, ${importedState.meals.length - newMeals.length} already existed).`);
+  } else {
+    // Full replace
+    Object.assign(state, importedState);
+    alert(`Data imported successfully. ${mealCount} meals loaded.`);
+  }
+  
+  saveState();
+  closeModal();
+  renderCookbook();
+}
+
+// ============================================================
+//  THEME
+// ============================================================
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('mealPlannerTheme', next);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('mealPlannerTheme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+}
+initTheme();
+
+// ============================================================
+//  INIT
+// ============================================================
+initFirebase();
+showSetupScreen();
+if (!document.getElementById('setupScreen')) renderCookbook();
+cleanPurchaseHistory();
+
+// Re-render on resize for mobile/desktop planner switch
+window.addEventListener('resize', () => {
+  if (document.getElementById('panel-planner').classList.contains('active')) {
+    renderPlanner();
+  }
+});
+</script>
+</body>
+</html>
