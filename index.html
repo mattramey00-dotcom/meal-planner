@@ -767,37 +767,197 @@ let syncPaused = false;
 // ============================================================
 //  FIREBASE CLOUD SYNC
 // ============================================================
-// INSTRUCTIONS: Replace the config below with your own Firebase config.
-// 1. Go to https://console.firebase.google.com
-// 2. Click "Create a project" (or "Add project") — name it anything
-// 3. Once created, click the gear icon → Project Settings
-// 4. Scroll down to "Your apps" → click the </> (Web) icon
-// 5. Register an app name (anything) → click Register
-// 6. Copy the firebaseConfig object and paste it below
-// 7. Go to "Build" → "Realtime Database" in the left sidebar
-// 8. Click "Create Database" → choose any location → Start in TEST MODE
-// 9. Done! Your data now syncs across all devices.
+// Config is saved in each user's browser via localStorage.
+// On first visit, a setup screen lets them paste their own Firebase config.
+const FIREBASE_CONFIG_KEY = 'mealPlannerFirebaseConfig';
 
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCXcosslbERdhQZNeQP3-mJH2pSq-Lx90w",
-  authDomain: "meal-planner-418d3.firebaseapp.com",
-  databaseURL: "https://meal-planner-418d3-default-rtdb.firebaseio.com",
-  projectId: "meal-planner-418d3",
-  storageBucket: "meal-planner-418d3.firebasestorage.app",
-  messagingSenderId: "311393597259",
-  appId: "1:311393597259:web:1a90625affabaf05ca1ace"
-};
+function getSavedFirebaseConfig() {
+  try {
+    const saved = localStorage.getItem(FIREBASE_CONFIG_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return null;
+}
+
+function saveFirebaseConfig(config) {
+  localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
+}
+
+function clearFirebaseConfig() {
+  localStorage.removeItem(FIREBASE_CONFIG_KEY);
+  firebaseReady = false;
+  db = null;
+  updateSyncIndicator('off');
+}
+
+function showSetupScreen() {
+  const hasConfig = !!getSavedFirebaseConfig();
+  const hasSkipped = localStorage.getItem('mealPlannerSetupDone');
+  if (hasConfig || hasSkipped) return;
+
+  const setupEl = document.createElement('div');
+  setupEl.id = 'setupScreen';
+  setupEl.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)">
+      <div style="max-width:480px;width:100%">
+        <div style="text-align:center;margin-bottom:40px">
+          <div style="width:64px;height:64px;background:var(--accent);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 4px 20px rgba(37,99,235,.25)">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+          </div>
+          <h1 style="font-size:32px;font-weight:400;margin-bottom:8px;letter-spacing:-0.5px">Meal Planner</h1>
+          <p style="color:var(--text3);font-size:13px;line-height:1.6">Plan your weekly meals, auto-generate grocery lists,<br>and shop smarter — all in one place.</p>
+        </div>
+
+        <div class="card" style="padding:28px;margin-bottom:16px">
+          <div style="text-align:center;margin-bottom:24px">
+            <div style="font-size:15px;font-weight:600;margin-bottom:6px">Welcome</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6">Choose how you'd like to get started.</div>
+          </div>
+
+          <button class="btn btn-primary" onclick="skipSetup()" style="width:100%;justify-content:center;padding:14px;font-size:14px;margin-bottom:12px">
+            Start Without Sync
+          </button>
+          <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:28px">
+            Data saves to this device only. You can enable sync anytime later.
+          </div>
+
+          <div style="border-top:1px solid var(--border);padding-top:24px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <div style="font-size:13px;font-weight:600">Enable Cloud Sync</div>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6">
+              Sync your meals and grocery lists between phone and computer in real-time. Requires a free Firebase account — takes about 2 minutes.
+            </div>
+
+            <details style="font-size:12px;color:var(--text2)">
+              <summary style="cursor:pointer;font-weight:600;margin-bottom:14px;color:var(--accent)">Set up now</summary>
+              
+              <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px">
+                <ol style="padding-left:16px;line-height:2.4;font-size:11px;margin:0">
+                  <li>Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent)">console.firebase.google.com</a></li>
+                  <li>Sign in with Google → <strong>Create a project</strong></li>
+                  <li>Name it anything → disable Analytics → <strong>Create</strong></li>
+                  <li>On Project Overview, click the <strong>&lt;/&gt;</strong> (Web) icon</li>
+                  <li>Name it anything → <strong>Register app</strong></li>
+                  <li>Copy the <strong>firebaseConfig</strong> block shown</li>
+                  <li>Left sidebar: <strong>Build → Realtime Database</strong></li>
+                  <li>Click <strong>Create Database</strong> → any location → <strong>Start in test mode</strong></li>
+                  <li>Paste your config below and click connect:</li>
+                </ol>
+              </div>
+
+              <textarea id="firebaseConfigInput" placeholder='Paste your firebaseConfig here — example:
+
+{
+  apiKey: "AIza...",
+  authDomain: "my-project.firebaseapp.com",
+  databaseURL: "https://my-project-default-rtdb.firebaseio.com",
+  projectId: "my-project",
+  storageBucket: "my-project.firebasestorage.app",
+  messagingSenderId: "123456",
+  appId: "1:123456:web:abcdef"
+}' style="height:150px;font-size:11px;font-family:monospace;margin-bottom:12px"></textarea>
+
+              <button class="btn btn-primary" onclick="submitFirebaseConfig()" style="width:100%;justify-content:center;padding:12px">
+                Connect & Start
+              </button>
+            </details>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:10px;color:var(--text3);line-height:1.6">
+          Your data is private — stored in your own browser and your own database.<br>
+          No accounts, no tracking, no ads.
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('app').style.display = 'none';
+  document.body.appendChild(setupEl);
+}
+
+function skipSetup() {
+  localStorage.setItem('mealPlannerSetupDone', 'true');
+  const el = document.getElementById('setupScreen');
+  if (el) el.remove();
+  document.getElementById('app').style.display = '';
+  renderCookbook();
+}
+
+function submitFirebaseConfig() {
+  const input = document.getElementById('firebaseConfigInput');
+  const raw = (input?.value || '').trim();
+  if (!raw) { alert('Please paste your Firebase config first.'); return; }
+
+  try {
+    let cleaned = raw;
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) cleaned = match[0];
+    cleaned = cleaned.replace(/(\w+)\s*:/g, '"$1":').replace(/""+/g, '"').replace(/,\s*}/g, '}');
+    const config = JSON.parse(cleaned);
+
+    if (!config.apiKey || !config.databaseURL || !config.projectId) {
+      alert('Config looks incomplete — make sure it has apiKey, databaseURL, and projectId.');
+      return;
+    }
+
+    saveFirebaseConfig(config);
+    localStorage.setItem('mealPlannerSetupDone', 'true');
+
+    const el = document.getElementById('setupScreen');
+    if (el) el.remove();
+    document.getElementById('app').style.display = '';
+
+    initFirebase();
+    renderCookbook();
+    alert('Firebase connected! Cloud sync is now active.');
+  } catch(e) {
+    alert('Could not parse that config. Make sure you copied the entire firebaseConfig block including the curly braces { }');
+  }
+}
+
+function submitSyncPanelConfig() {
+  const input = document.getElementById('syncPanelConfigInput');
+  const raw = (input?.value || '').trim();
+  if (!raw) { alert('Please paste your Firebase config first.'); return; }
+
+  try {
+    let cleaned = raw;
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) cleaned = match[0];
+    cleaned = cleaned.replace(/(\w+)\s*:/g, '"$1":').replace(/""+/g, '"').replace(/,\s*}/g, '}');
+    const config = JSON.parse(cleaned);
+
+    if (!config.apiKey || !config.databaseURL || !config.projectId) {
+      alert('Config looks incomplete — make sure it has apiKey, databaseURL, and projectId.');
+      return;
+    }
+
+    saveFirebaseConfig(config);
+    initFirebase();
+    closeModal();
+    alert('Firebase connected! Cloud sync is now active.');
+  } catch(e) {
+    alert('Could not parse that config. Make sure you copied the entire firebaseConfig block including the curly braces { }');
+  }
+}
 
 function initFirebase() {
-  if (!FIREBASE_CONFIG.apiKey) {
-    console.log('Firebase not configured — running in local-only mode. Open sync panel for setup instructions.');
+  const config = getSavedFirebaseConfig();
+  if (!config || !config.apiKey) {
+    console.log('Firebase not configured — running in local-only mode.');
+    updateSyncIndicator('off');
     return;
   }
   try {
-    firebase.initializeApp(FIREBASE_CONFIG);
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
+    }
     db = firebase.database();
     firebaseReady = true;
-    
+
     // Listen for remote changes
     db.ref('mealPlanner').on('value', (snapshot) => {
       if (syncPaused) return;
@@ -805,7 +965,6 @@ function initFirebase() {
       if (remoteData && remoteData._lastModified) {
         const localModified = state._lastModified || 0;
         if (remoteData._lastModified > localModified) {
-          // Remote is newer — update local
           syncPaused = true;
           state = remoteData;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -815,7 +974,7 @@ function initFirebase() {
         }
       }
     });
-    
+
     // Push local data to cloud on first connect if cloud is empty
     db.ref('mealPlanner').once('value', (snapshot) => {
       if (!snapshot.val() && state.meals && state.meals.length > 0) {
@@ -823,7 +982,7 @@ function initFirebase() {
         db.ref('mealPlanner').set(state);
       }
     });
-    
+
     updateSyncIndicator('synced');
     console.log('Firebase connected — cloud sync active.');
   } catch(e) {
@@ -3906,28 +4065,26 @@ function openSyncPanel() {
         <div class="card" style="padding:14px 16px;margin-bottom:20px;border-color:${syncActive ? 'var(--green)' : 'var(--border)'}">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <div style="width:10px;height:10px;border-radius:50%;background:${syncActive ? 'var(--green)' : 'var(--text3)'};flex-shrink:0"></div>
-            <div style="font-size:13px;font-weight:600">${syncActive ? 'Cloud Sync Active' : 'Cloud Sync Not Configured'}</div>
+            <div style="font-size:13px;font-weight:600;flex:1">${syncActive ? 'Cloud Sync Active' : 'Cloud Sync Off'}</div>
+            ${syncActive ? '<button class="btn btn-sm btn-ghost" onclick="if(confirm(\'Disconnect cloud sync? Your data stays on this device.\')){clearFirebaseConfig();closeModal()}" style="font-size:10px;color:var(--red)">Disconnect</button>' : ''}
           </div>
           ${syncActive ? 
             '<div style="font-size:11px;color:var(--text3)">Changes sync automatically across all your devices in real-time.</div>' :
             `<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Set up Firebase (free) to auto-sync between phone and computer.</div>
             <details style="font-size:11px;color:var(--text2)">
-              <summary style="cursor:pointer;font-weight:600;margin-bottom:8px">Setup Instructions (one-time, ~2 minutes)</summary>
-              <ol style="padding-left:18px;line-height:2">
-                <li>Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent)">console.firebase.google.com</a></li>
-                <li>Sign in with Google and click <strong>Create a project</strong></li>
-                <li>Name it anything (e.g. "meal-planner") → Continue through setup</li>
-                <li>Click the gear icon → <strong>Project Settings</strong></li>
-                <li>Scroll to "Your apps" → click the <strong>&lt;/&gt;</strong> (Web) icon</li>
-                <li>Name it anything → click <strong>Register app</strong></li>
-                <li>Copy the <strong>firebaseConfig</strong> object it shows you</li>
-                <li>In the left sidebar, click <strong>Build → Realtime Database</strong></li>
-                <li>Click <strong>Create Database</strong> → pick any location → <strong>Start in test mode</strong></li>
-                <li>Open your <code>index.html</code> file in a text editor</li>
-                <li>Find <code>FIREBASE_CONFIG</code> near the top of the script</li>
-                <li>Paste your config inside the braces</li>
-                <li>Save and re-upload to Netlify</li>
+              <summary style="cursor:pointer;font-weight:600;margin-bottom:8px;color:var(--accent)">Setup Cloud Sync (~2 minutes)</summary>
+              <ol style="padding-left:18px;line-height:2.2;margin-bottom:12px">
+                <li>Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent)">console.firebase.google.com</a> and sign in</li>
+                <li><strong>Create a project</strong> → name it anything</li>
+                <li>On Project Overview, click the <strong>&lt;/&gt;</strong> (Web) icon</li>
+                <li>Name it anything → <strong>Register app</strong></li>
+                <li>Copy the <strong>firebaseConfig</strong> block</li>
+                <li>Left sidebar: <strong>Build → Realtime Database → Create Database</strong></li>
+                <li>Pick location → <strong>Start in test mode</strong> → Enable</li>
+                <li>Paste config below:</li>
               </ol>
+              <textarea id="syncPanelConfigInput" placeholder='Paste firebaseConfig here...' style="height:120px;font-size:11px;font-family:monospace;margin-bottom:10px"></textarea>
+              <button class="btn btn-primary btn-sm" onclick="submitSyncPanelConfig()" style="width:100%;justify-content:center">Save & Connect</button>
             </details>`
           }
         </div>
@@ -4144,7 +4301,8 @@ initTheme();
 //  INIT
 // ============================================================
 initFirebase();
-renderCookbook();
+showSetupScreen();
+if (!document.getElementById('setupScreen')) renderCookbook();
 cleanPurchaseHistory();
 
 // Re-render on resize for mobile/desktop planner switch
