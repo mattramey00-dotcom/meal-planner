@@ -553,6 +553,11 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <div id="syncStatus" style="position:absolute;bottom:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--text3);border:1.5px solid var(--surface)" title="Local only"></div>
       </button>
+      <button id="cloudSaveBtn" class="btn btn-primary btn-sm" onclick="syncToCloud()" 
+              style="display:none;align-items:center;gap:4px;margin-left:8px;padding:6px 12px;font-size:11px;white-space:nowrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2 2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save
+      </button>
     </div>
   </div>
 
@@ -747,7 +752,7 @@ const MEAL_TYPES = [
   { id: 'snack', label: 'Snack', cls: 'tag-snack' },
   { id: 'fruit', label: 'Fruit', cls: 'tag-fruit' },
 ];
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const GROCERY_CATEGORIES = {
   'Produce': ['lettuce','tomato','onion','garlic','potato','carrot','broccoli','spinach','avocado','pepper','mushroom','celery','cucumber','lemon','lime','banana','apple','berries','cilantro','parsley','basil','ginger','jalapeño','corn','zucchini','squash','kale','cabbage','green bean','pea','fruit','vegetable','salad'],
   'Meat & Seafood': ['chicken','beef','pork','turkey','salmon','shrimp','fish','sausage','bacon','ham','steak','ground','lamb','tuna','crab','lobster','meat','ribs'],
@@ -983,7 +988,7 @@ function initFirebase() {
         const localModified = state._lastModified || 0;
         if (remoteData._lastModified > localModified) {
           syncPaused = true;
-          state = remoteData;
+          state = fixFirebaseArrays(remoteData);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
           renderAll();
           updateSyncIndicator('synced');
@@ -1026,10 +1031,13 @@ function updateSyncIndicator(status) {
   if (!el) return;
   if (status === 'synced') {
     el.style.background = 'var(--green)';
-    el.title = 'Cloud sync active';
+    el.title = 'Cloud sync — all changes saved';
   } else if (status === 'saving') {
     el.style.background = 'var(--amber)';
     el.title = 'Syncing...';
+  } else if (status === 'unsaved') {
+    el.style.background = 'var(--amber)';
+    el.title = 'Unsaved changes — click Save to Cloud';
   } else if (status === 'error') {
     el.style.background = 'var(--red)';
     el.title = 'Sync error';
@@ -1037,29 +1045,85 @@ function updateSyncIndicator(status) {
     el.style.background = 'var(--text3)';
     el.title = 'Local only — Firebase not configured';
   }
+  
+  const saveBtn = document.getElementById('cloudSaveBtn');
+  if (saveBtn) {
+    saveBtn.style.display = (status === 'unsaved') ? 'flex' : 'none';
+  }
+}
+
+// Firebase stores arrays as objects with numeric keys.
+// This converts them back to proper arrays so .filter/.map/.find work.
+function fixFirebaseArrays(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj !== 'object') return obj;
+  
+  const keys = Object.keys(obj);
+  const isNumericArray = keys.length > 0 && keys.every((k, i) => k === String(i) || !isNaN(k));
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => fixFirebaseArrays(item));
+  } else if (isNumericArray && keys.length > 0 && !(obj._lastModified || obj.weekPlan || obj.groceryChecked)) {
+    return keys.sort((a,b) => Number(a) - Number(b)).map(k => fixFirebaseArrays(obj[k]));
+  } else {
+    const fixed = {};
+    for (const k of keys) {
+      fixed[k] = fixFirebaseArrays(obj[k]);
+    }
+    return fixed;
+  }
 }
 
 function loadState() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.meals && !Array.isArray(parsed.meals)) parsed.meals = Object.values(parsed.meals);
+      if (parsed.groceryList && !Array.isArray(parsed.groceryList)) parsed.groceryList = Object.values(parsed.groceryList);
+      if (parsed.history && !Array.isArray(parsed.history)) parsed.history = Object.values(parsed.history);
+      if (parsed.householdItems && !Array.isArray(parsed.householdItems)) parsed.householdItems = Object.values(parsed.householdItems);
+      if (parsed.miscFoodItems && !Array.isArray(parsed.miscFoodItems)) parsed.miscFoodItems = Object.values(parsed.miscFoodItems);
+      if (parsed.blockedPairings && !Array.isArray(parsed.blockedPairings)) parsed.blockedPairings = Object.values(parsed.blockedPairings);
+      if (parsed.purchaseHistory && !Array.isArray(parsed.purchaseHistory)) parsed.purchaseHistory = Object.values(parsed.purchaseHistory);
+      if (Array.isArray(parsed.meals)) {
+        parsed.meals = parsed.meals.map(m => {
+          if (m.categories && !Array.isArray(m.categories)) m.categories = Object.values(m.categories);
+          if (m.ingredients && !Array.isArray(m.ingredients)) m.ingredients = Object.values(m.ingredients);
+          if (m.mealTypes && !Array.isArray(m.mealTypes)) m.mealTypes = Object.values(m.mealTypes);
+          return m;
+        });
+      }
+      return parsed;
+    }
   } catch(e) {}
   return { meals: [], weekPlan: {}, groceryList: [], groceryChecked: {}, history: [] };
 }
+
+let hasUnsavedChanges = false;
 
 function saveState() {
   state._lastModified = Date.now();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   
-  // Sync to cloud
-  if (firebaseReady && db && !syncPaused) {
-    updateSyncIndicator('saving');
-    db.ref('mealPlanner').set(state).then(() => {
-      updateSyncIndicator('synced');
-    }).catch(() => {
-      updateSyncIndicator('error');
-    });
+  if (firebaseReady) {
+    hasUnsavedChanges = true;
+    updateSyncIndicator('unsaved');
   }
+}
+
+function syncToCloud() {
+  if (!firebaseReady || !db) {
+    alert('Cloud sync is not configured. Set it up in the Sync panel.');
+    return;
+  }
+  updateSyncIndicator('saving');
+  db.ref('mealPlanner').set(state).then(() => {
+    hasUnsavedChanges = false;
+    updateSyncIndicator('synced');
+  }).catch(() => {
+    updateSyncIndicator('error');
+  });
 }
 
 // ============================================================
@@ -1339,7 +1403,7 @@ let dragSource = null;
 function renderPlanner() {
   const today = new Date();
   const todayDay = today.getDay();
-  const dayMap = [6,0,1,2,3,4,5];
+  const dayMap = [0,1,2,3,4,5,6]; // JS getDay: 0=Sun,1=Mon,...6=Sat — matches our DAYS array now
   const todayIdx = dayMap[todayDay];
   const isMobile = window.innerWidth < 768;
 
@@ -1554,6 +1618,7 @@ function removeSlot(key) {
 }
 
 function openSlotPicker(key, mealType) {
+  const currentMealId = state.weekPlan[key];
   const meals = state.meals.filter(m => {
     if (m.mealTypes && m.mealTypes.length > 0) return m.mealTypes.includes(mealType);
     return true;
@@ -1569,14 +1634,21 @@ function openSlotPicker(key, mealType) {
         </div>
         <div id="slotPickerList" style="max-height:400px;overflow-y:auto">
           ${meals.length === 0 ? '<div style="padding:20px;text-align:center;color:var(--text3)">No meals in your cookbook yet.<br>Add meals in the Cookbook tab first!</div>' : ''}
-          ${meals.map(m => `
-            <div class="meal-card" style="margin-bottom:8px;padding:14px" onclick="assignSlot('${key}','${m.id}')">
-              <div class="meal-card-name" style="font-size:14px">${m.name}</div>
-              <div class="meal-card-tags" style="margin-top:6px">
-                ${(m.categories||[]).map(c => {const cat=CATEGORIES.find(x=>x.id===c);return cat?`<span class="tag ${cat.cls}">${cat.icon} ${cat.label}</span>`:''}).join('')}
+          ${meals.map(m => {
+            const isSelected = m.id === currentMealId;
+            return `
+            <div class="meal-card" style="margin-bottom:8px;padding:14px;cursor:pointer;${isSelected?'border-color:var(--accent);background:var(--accent-dim)':''}" onclick="assignSlot('${key}','${m.id}')">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="grocery-check ${isSelected?'checked':''}" style="flex-shrink:0">${isSelected?'✓':''}</div>
+                <div style="flex:1">
+                  <div class="meal-card-name" style="font-size:14px;margin:0">${m.name}</div>
+                  <div class="meal-card-tags" style="margin-top:6px">
+                    ${(m.categories||[]).map(c => {const cat=CATEGORIES.find(x=>x.id===c);return cat?`<span class="tag ${cat.cls}">${cat.icon} ${cat.label}</span>`:''}).join('')}
+                  </div>
+                </div>
               </div>
-            </div>
-          `).join('')}
+            </div>`;
+          }).join('')}
         </div>
       </div>
     </div>
@@ -1585,19 +1657,27 @@ function openSlotPicker(key, mealType) {
 
 function filterSlotPicker(search, key, mealType) {
   search = search.toLowerCase();
+  const currentMealId = state.weekPlan[key];
   const meals = state.meals.filter(m => {
     if (m.mealTypes && m.mealTypes.length > 0 && !m.mealTypes.includes(mealType)) return false;
     if (search && !m.name.toLowerCase().includes(search)) return false;
     return true;
   });
-  document.getElementById('slotPickerList').innerHTML = meals.map(m => `
-    <div class="meal-card" style="margin-bottom:8px;padding:14px" onclick="assignSlot('${key}','${m.id}')">
-      <div class="meal-card-name" style="font-size:14px">${m.name}</div>
-      <div class="meal-card-tags" style="margin-top:6px">
-        ${(m.categories||[]).map(c => {const cat=CATEGORIES.find(x=>x.id===c);return cat?`<span class="tag ${cat.cls}">${cat.icon} ${cat.label}</span>`:''}).join('')}
+  document.getElementById('slotPickerList').innerHTML = meals.map(m => {
+    const isSelected = m.id === currentMealId;
+    return `
+    <div class="meal-card" style="margin-bottom:8px;padding:14px;cursor:pointer;${isSelected?'border-color:var(--accent);background:var(--accent-dim)':''}" onclick="assignSlot('${key}','${m.id}')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="grocery-check ${isSelected?'checked':''}" style="flex-shrink:0">${isSelected?'✓':''}</div>
+        <div style="flex:1">
+          <div class="meal-card-name" style="font-size:14px;margin:0">${m.name}</div>
+          <div class="meal-card-tags" style="margin-top:6px">
+            ${(m.categories||[]).map(c => {const cat=CATEGORIES.find(x=>x.id===c);return cat?`<span class="tag ${cat.cls}">${cat.icon} ${cat.label}</span>`:''}).join('')}
+          </div>
+        </div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function assignSlot(key, mealId) {
@@ -4211,123 +4291,4 @@ function importFromFile(event) {
   if (!file) return;
   
   const reader = new FileReader();
-  reader.onload = (e) => {
-    processImport(e.target.result);
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-
-function importFromPaste() {
-  const text = document.getElementById('importPasteBox')?.value?.trim();
-  if (!text) {
-    alert('Paste your exported data first.');
-    return;
-  }
-  processImport(text);
-}
-
-function processImport(jsonString) {
-  let parsed;
-  try {
-    parsed = JSON.parse(jsonString);
-  } catch(e) {
-    alert('Invalid data format. Make sure you exported correctly.');
-    return;
-  }
-  
-  // Support both wrapped format and raw state
-  const importedState = parsed.state || parsed;
-  
-  // Validate it looks like meal planner data
-  if (!importedState.meals && !importedState.weekPlan) {
-    alert('This doesn\'t look like meal planner data. Make sure you\'re importing the right file.');
-    return;
-  }
-  
-  const mealCount = importedState.meals ? importedState.meals.length : 0;
-  const exportDate = parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : 'Unknown';
-  
-  const mode = confirm(
-    `Found ${mealCount} meals from ${exportDate}.\n\n` +
-    `OK = Replace all current data\n` +
-    `Cancel = Cancel import`
-  );
-  
-  if (!mode) return;
-  
-  // Merge option — ask if they want to merge cookbooks
-  let doMerge = false;
-  if (state.meals && state.meals.length > 0 && importedState.meals && importedState.meals.length > 0) {
-    doMerge = confirm(
-      'You have existing meals. Would you like to MERGE (keep both)?\n\n' +
-      'OK = Merge cookbooks (keep your meals + add imported ones)\n' +
-      'Cancel = Full replace (overwrite everything)'
-    );
-  }
-  
-  if (doMerge) {
-    // Merge: add imported meals that don't already exist
-    const existingNames = new Set(state.meals.map(m => m.name.toLowerCase()));
-    const newMeals = (importedState.meals || []).filter(m => !existingNames.has(m.name.toLowerCase()));
-    state.meals = [...state.meals, ...newMeals];
-    
-    // Take the imported planner, grocery, etc.
-    if (importedState.weekPlan) state.weekPlan = importedState.weekPlan;
-    if (importedState.groceryList) state.groceryList = importedState.groceryList;
-    if (importedState.groceryChecked) state.groceryChecked = importedState.groceryChecked;
-    if (importedState.householdItems) state.householdItems = importedState.householdItems;
-    if (importedState.miscFoodItems) state.miscFoodItems = importedState.miscFoodItems;
-    if (importedState.blockedPairings) state.blockedPairings = importedState.blockedPairings;
-    if (importedState.purchaseHistory) state.purchaseHistory = importedState.purchaseHistory;
-    
-    alert(`Merged ${newMeals.length} new meals into your cookbook (${newMeals.length} added, ${importedState.meals.length - newMeals.length} already existed).`);
-  } else {
-    // Full replace
-    Object.assign(state, importedState);
-    alert(`Data imported successfully. ${mealCount} meals loaded.`);
-  }
-  
-  saveState();
-  closeModal();
-  renderCookbook();
-}
-
-// ============================================================
-//  THEME
-// ============================================================
-function toggleTheme() {
-  const html = document.documentElement;
-  const current = html.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('mealPlannerTheme', next);
-}
-
-function initTheme() {
-  const saved = localStorage.getItem('mealPlannerTheme');
-  if (saved) {
-    document.documentElement.setAttribute('data-theme', saved);
-  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.setAttribute('data-theme', 'dark');
-  }
-}
-initTheme();
-
-// ============================================================
-//  INIT
-// ============================================================
-initFirebase();
-showSetupScreen();
-if (!document.getElementById('setupScreen')) renderCookbook();
-cleanPurchaseHistory();
-
-// Re-render on resize for mobile/desktop planner switch
-window.addEventListener('resize', () => {
-  if (document.getElementById('panel-planner').classList.contains('active')) {
-    renderPlanner();
-  }
-});
-</script>
-</body>
-</html>
+ 
