@@ -305,9 +305,9 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 .meal-slot:hover .block-pair-btn{opacity:0.5}
 .add-side-btn{
   border:none;background:var(--surface2);color:var(--text3);
-  font-size:9px;font-weight:600;padding:2px 8px;border-radius:4px;
+  font-size:12px;font-weight:600;padding:8px 14px;border-radius:6px;
   cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;
-  transition:all .15s;
+  transition:all .15s;min-height:36px;
 }
 .add-side-btn:hover{background:var(--green-dim);color:var(--green)}
 .side-option{
@@ -570,6 +570,8 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
       </div>
       <button class="btn btn-primary" onclick="openMealModal()">+ Add Meal</button>
       <button class="btn btn-secondary" onclick="openBulkImport()">Bulk Import</button>
+      <button id="saveBtn_cookbook" class="btn btn-primary btn-sm" onclick="syncSectionToCloud('cookbook')" 
+              style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Save to Cloud</button>
     </div>
     <div class="filter-row" id="filterRow"></div>
     <div id="cookbookGrid"></div>
@@ -583,6 +585,8 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
         <button class="btn btn-primary" onclick="autoGenerate()">Auto-Generate Dinners</button>
         <button class="btn btn-secondary" onclick="clearWeek()">Clear Week</button>
         <button class="btn btn-sm btn-ghost" onclick="openBlockedPairings()" title="Manage blocked pairings">Blocked Pairings</button>
+        <button id="saveBtn_planner" class="btn btn-primary btn-sm" onclick="syncSectionToCloud('planner')" 
+                style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Save to Cloud</button>
       </div>
     </div>
 
@@ -633,6 +637,8 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
         <button class="btn btn-secondary" onclick="clearGroceryChecks()">Uncheck All</button>
         <button class="btn btn-secondary" onclick="clearGroceryList()" style="color:var(--red)">Clear List</button>
         <button class="btn btn-secondary" onclick="copyGroceryList()">Copy List</button>
+        <button id="saveBtn_grocery" class="btn btn-primary btn-sm" onclick="syncSectionToCloud('grocery')" 
+                style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Save to Cloud</button>
       </div>
     </div>
     
@@ -980,32 +986,49 @@ function initFirebase() {
     db = firebase.database();
     firebaseReady = true;
 
-    // Listen for remote changes
-    db.ref('mealPlanner').on('value', (snapshot) => {
-      if (syncPaused) return;
-      const remoteData = snapshot.val();
-      if (remoteData && remoteData._lastModified) {
+    // Listen for remote changes per section
+    ['cookbook', 'planner', 'grocery'].forEach(section => {
+      db.ref('mealPlanner/' + section).on('value', (snapshot) => {
+        if (syncPaused) return;
+        const remoteData = snapshot.val();
+        if (!remoteData || !remoteData._lastModified) return;
+        
+        // Check if remote is newer than local
         const localModified = state._lastModified || 0;
-        if (remoteData._lastModified > localModified) {
-          if (hasUnsavedChanges) {
-            showRemoteUpdateBanner(remoteData);
-          } else {
-            syncPaused = true;
-            state = fixFirebaseArrays(remoteData);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            renderAll();
-            updateSyncIndicator('synced');
-            syncPaused = false;
-          }
+        if (remoteData._lastModified <= localModified) return;
+        
+        if (unsavedSections.has(section)) {
+          // Conflict — ask user
+          showRemoteUpdateBanner(section, remoteData);
+        } else {
+          // No local edits for this section — auto-pull
+          syncPaused = true;
+          applySectionData(section, remoteData);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          renderAll();
+          syncPaused = false;
         }
-      }
+      });
     });
 
-    // Push local data to cloud on first connect if cloud is empty
+    // Migrate: if old single-path data exists, split it into sections
     db.ref('mealPlanner').once('value', (snapshot) => {
-      if (!snapshot.val() && state.meals && state.meals.length > 0) {
-        state._lastModified = Date.now();
-        db.ref('mealPlanner').set(state);
+      const data = snapshot.val();
+      if (data && data.meals && !data.cookbook) {
+        // Old format — migrate to per-section
+        const fixed = fixFirebaseArrays(data);
+        db.ref('mealPlanner/cookbook').set({ meals: fixed.meals || [], history: fixed.history || [], _lastModified: Date.now() });
+        db.ref('mealPlanner/planner').set({ weekPlan: fixed.weekPlan || {}, _lastModified: Date.now() });
+        db.ref('mealPlanner/grocery').set({ 
+          groceryList: fixed.groceryList || [], groceryChecked: fixed.groceryChecked || {},
+          householdItems: fixed.householdItems || [], miscFoodItems: fixed.miscFoodItems || [],
+          purchaseHistory: fixed.purchaseHistory || [], _lastModified: Date.now() 
+        });
+        console.log('Migrated old Firebase data to per-section format.');
+      }
+      // If cloud is empty, push local data
+      if (!data && state.meals && state.meals.length > 0) {
+        syncToCloud();
       }
     });
 
@@ -1017,8 +1040,26 @@ function initFirebase() {
   }
 }
 
-function showRemoteUpdateBanner(remoteData) {
-  window._pendingRemoteData = remoteData;
+function applySectionData(section, remoteData) {
+  const fixed = fixFirebaseArrays(remoteData);
+  if (section === 'cookbook') {
+    if (fixed.meals) state.meals = Array.isArray(fixed.meals) ? fixed.meals : Object.values(fixed.meals);
+    if (fixed.history) state.history = Array.isArray(fixed.history) ? fixed.history : Object.values(fixed.history);
+  } else if (section === 'planner') {
+    if (fixed.weekPlan) state.weekPlan = fixed.weekPlan;
+  } else if (section === 'grocery') {
+    if (fixed.groceryList) state.groceryList = Array.isArray(fixed.groceryList) ? fixed.groceryList : Object.values(fixed.groceryList);
+    if (fixed.groceryChecked) state.groceryChecked = fixed.groceryChecked;
+    if (fixed.householdItems) state.householdItems = Array.isArray(fixed.householdItems) ? fixed.householdItems : Object.values(fixed.householdItems);
+    if (fixed.miscFoodItems) state.miscFoodItems = Array.isArray(fixed.miscFoodItems) ? fixed.miscFoodItems : Object.values(fixed.miscFoodItems);
+    if (fixed.purchaseHistory) state.purchaseHistory = Array.isArray(fixed.purchaseHistory) ? fixed.purchaseHistory : Object.values(fixed.purchaseHistory);
+  }
+  state._lastModified = fixed._lastModified || Date.now();
+}
+
+function showRemoteUpdateBanner(section, remoteData) {
+  window._pendingRemote = window._pendingRemote || {};
+  window._pendingRemote[section] = remoteData;
   
   let banner = document.getElementById('remoteBanner');
   if (!banner) {
@@ -1027,26 +1068,27 @@ function showRemoteUpdateBanner(remoteData) {
     banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--accent);border-radius:10px;padding:12px 18px;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:10000;display:flex;align-items:center;gap:12px;font-size:12px;max-width:420px';
     document.body.appendChild(banner);
   }
+  const sectionLabel = section.charAt(0).toUpperCase() + section.slice(1);
   banner.innerHTML = `
     <div style="flex:1">
-      <div style="font-weight:600;margin-bottom:2px">Changes from another device</div>
-      <div style="color:var(--text3);font-size:11px">Someone updated the planner. Pull their changes or keep yours?</div>
+      <div style="font-weight:600;margin-bottom:2px">${sectionLabel} updated from another device</div>
+      <div style="color:var(--text3);font-size:11px">Pull their changes or keep yours?</div>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="pullRemoteChanges()" style="white-space:nowrap">Pull Changes</button>
+    <button class="btn btn-primary btn-sm" onclick="pullRemoteChanges('${section}')" style="white-space:nowrap">Pull</button>
     <button class="btn btn-secondary btn-sm" onclick="dismissRemoteBanner()" style="white-space:nowrap">Keep Mine</button>
   `;
 }
 
-function pullRemoteChanges() {
-  if (window._pendingRemoteData) {
+function pullRemoteChanges(section) {
+  if (window._pendingRemote && window._pendingRemote[section]) {
     syncPaused = true;
-    state = fixFirebaseArrays(window._pendingRemoteData);
+    applySectionData(section, window._pendingRemote[section]);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    hasUnsavedChanges = false;
+    unsavedSections.delete(section);
+    updateSectionSaveButtons();
     renderAll();
-    updateSyncIndicator('synced');
     syncPaused = false;
-    window._pendingRemoteData = null;
+    delete window._pendingRemote[section];
   }
   dismissRemoteBanner();
 }
@@ -1054,7 +1096,6 @@ function pullRemoteChanges() {
 function dismissRemoteBanner() {
   const banner = document.getElementById('remoteBanner');
   if (banner) banner.remove();
-  window._pendingRemoteData = null;
 }
 
 function renderAll() {
@@ -1144,30 +1185,121 @@ function loadState() {
   return { meals: [], weekPlan: {}, groceryList: [], groceryChecked: {}, history: [] };
 }
 
-let hasUnsavedChanges = false;
+let unsavedSections = new Set(); // tracks which sections have unsaved changes: 'cookbook', 'planner', 'grocery'
 
-function saveState() {
+function detectActiveSection() {
+  // Check which panel is currently active
+  const cookbook = document.getElementById('panel-cookbook');
+  const planner = document.getElementById('panel-planner');
+  const grocery = document.getElementById('panel-grocery');
+  if (cookbook && cookbook.classList.contains('active')) return 'cookbook';
+  if (planner && planner.classList.contains('active')) return 'planner';
+  if (grocery && grocery.classList.contains('active')) return 'grocery';
+  return null;
+}
+
+function saveState(section) {
   state._lastModified = Date.now();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   
   if (firebaseReady) {
-    hasUnsavedChanges = true;
-    updateSyncIndicator('unsaved');
+    // If no section specified, detect from active tab
+    const sec = section || detectActiveSection();
+    if (sec) {
+      unsavedSections.add(sec);
+      updateSectionSaveButtons();
+    }
   }
 }
 
-function syncToCloud() {
+// Map sections to their Firebase paths and state keys
+function getSectionData(section) {
+  if (section === 'cookbook') {
+    return { meals: state.meals, history: state.history || [] };
+  } else if (section === 'planner') {
+    return { weekPlan: state.weekPlan };
+  } else if (section === 'grocery') {
+    return { 
+      groceryList: state.groceryList || [], 
+      groceryChecked: state.groceryChecked || {},
+      householdItems: state.householdItems || [],
+      miscFoodItems: state.miscFoodItems || [],
+      purchaseHistory: state.purchaseHistory || []
+    };
+  }
+  return {};
+}
+
+function syncSectionToCloud(section) {
   if (!firebaseReady || !db) {
     alert('Cloud sync is not configured. Set it up in the Sync panel.');
     return;
   }
-  updateSyncIndicator('saving');
-  db.ref('mealPlanner').set(state).then(() => {
-    hasUnsavedChanges = false;
+  const data = getSectionData(section);
+  data._lastModified = Date.now();
+  state._lastModified = data._lastModified;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  
+  db.ref('mealPlanner/' + section).set(data).then(() => {
+    unsavedSections.delete(section);
+    updateSectionSaveButtons();
+    // Brief green flash on button
+    const btn = document.getElementById('saveBtn_' + section);
+    if (btn) {
+      btn.textContent = 'Saved!';
+      btn.style.background = 'var(--green)';
+      setTimeout(() => { updateSectionSaveButtons(); }, 1500);
+    }
+  }).catch(() => {
+    alert('Failed to save ' + section + '. Check your connection.');
+  });
+}
+
+function syncToCloud() {
+  // Save all unsaved sections at once
+  if (!firebaseReady || !db) {
+    alert('Cloud sync is not configured. Set it up in the Sync panel.');
+    return;
+  }
+  const promises = [];
+  for (const section of ['cookbook', 'planner', 'grocery']) {
+    const data = getSectionData(section);
+    data._lastModified = Date.now();
+    promises.push(db.ref('mealPlanner/' + section).set(data));
+  }
+  Promise.all(promises).then(() => {
+    unsavedSections.clear();
+    updateSectionSaveButtons();
     updateSyncIndicator('synced');
   }).catch(() => {
     updateSyncIndicator('error');
   });
+}
+
+function updateSectionSaveButtons() {
+  ['cookbook', 'planner', 'grocery'].forEach(section => {
+    const btn = document.getElementById('saveBtn_' + section);
+    if (btn) {
+      if (unsavedSections.has(section)) {
+        btn.style.display = 'inline-flex';
+        btn.textContent = 'Save to Cloud';
+        btn.style.background = '';
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+  });
+  
+  // Also update the global indicator
+  if (unsavedSections.size > 0) {
+    updateSyncIndicator('unsaved');
+  } else if (firebaseReady) {
+    updateSyncIndicator('synced');
+  }
+  
+  // Hide global save button — we use per-section now
+  const globalBtn = document.getElementById('cloudSaveBtn');
+  if (globalBtn) globalBtn.style.display = 'none';
 }
 
 // ============================================================
