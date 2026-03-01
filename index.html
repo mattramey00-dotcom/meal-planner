@@ -886,36 +886,62 @@ function skipSetup() {
   renderCookbook();
 }
 
+function parseFirebaseConfig(raw) {
+  // Extract individual values using regex - much more robust than JSON parsing
+  const extract = (key) => {
+    const patterns = [
+      new RegExp(key + '\\s*:\\s*"([^"]*)"'),
+      new RegExp(key + "\\s*:\\s*'([^']*)'"),
+      new RegExp('"' + key + '"\\s*:\\s*"([^"]*)"'),
+    ];
+    for (const p of patterns) {
+      const m = raw.match(p);
+      if (m) return m[1];
+    }
+    return '';
+  };
+
+  const config = {
+    apiKey: extract('apiKey'),
+    authDomain: extract('authDomain'),
+    databaseURL: extract('databaseURL'),
+    projectId: extract('projectId'),
+    storageBucket: extract('storageBucket'),
+    messagingSenderId: extract('messagingSenderId'),
+    appId: extract('appId'),
+  };
+
+  if (!config.apiKey || !config.projectId) return null;
+  
+  // If databaseURL is missing, construct it from projectId
+  if (!config.databaseURL && config.projectId) {
+    config.databaseURL = `https://${config.projectId}-default-rtdb.firebaseio.com`;
+  }
+
+  return config;
+}
+
 function submitFirebaseConfig() {
   const input = document.getElementById('firebaseConfigInput');
   const raw = (input?.value || '').trim();
   if (!raw) { alert('Please paste your Firebase config first.'); return; }
 
-  try {
-    let cleaned = raw;
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) cleaned = match[0];
-    cleaned = cleaned.replace(/(\w+)\s*:/g, '"$1":').replace(/""+/g, '"').replace(/,\s*}/g, '}');
-    const config = JSON.parse(cleaned);
-
-    if (!config.apiKey || !config.databaseURL || !config.projectId) {
-      alert('Config looks incomplete — make sure it has apiKey, databaseURL, and projectId.');
-      return;
-    }
-
-    saveFirebaseConfig(config);
-    localStorage.setItem('mealPlannerSetupDone', 'true');
-
-    const el = document.getElementById('setupScreen');
-    if (el) el.remove();
-    document.getElementById('app').style.display = '';
-
-    initFirebase();
-    renderCookbook();
-    alert('Firebase connected! Cloud sync is now active.');
-  } catch(e) {
-    alert('Could not parse that config. Make sure you copied the entire firebaseConfig block including the curly braces { }');
+  const config = parseFirebaseConfig(raw);
+  if (!config) {
+    alert('Could not find apiKey and projectId in what you pasted. Make sure you copied the firebaseConfig block from Firebase.');
+    return;
   }
+
+  saveFirebaseConfig(config);
+  localStorage.setItem('mealPlannerSetupDone', 'true');
+
+  const el = document.getElementById('setupScreen');
+  if (el) el.remove();
+  document.getElementById('app').style.display = '';
+
+  initFirebase();
+  renderCookbook();
+  alert('Firebase connected! Cloud sync is now active.');
 }
 
 function submitSyncPanelConfig() {
@@ -923,25 +949,16 @@ function submitSyncPanelConfig() {
   const raw = (input?.value || '').trim();
   if (!raw) { alert('Please paste your Firebase config first.'); return; }
 
-  try {
-    let cleaned = raw;
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) cleaned = match[0];
-    cleaned = cleaned.replace(/(\w+)\s*:/g, '"$1":').replace(/""+/g, '"').replace(/,\s*}/g, '}');
-    const config = JSON.parse(cleaned);
-
-    if (!config.apiKey || !config.databaseURL || !config.projectId) {
-      alert('Config looks incomplete — make sure it has apiKey, databaseURL, and projectId.');
-      return;
-    }
-
-    saveFirebaseConfig(config);
-    initFirebase();
-    closeModal();
-    alert('Firebase connected! Cloud sync is now active.');
-  } catch(e) {
-    alert('Could not parse that config. Make sure you copied the entire firebaseConfig block including the curly braces { }');
+  const config = parseFirebaseConfig(raw);
+  if (!config) {
+    alert('Could not find apiKey and projectId in what you pasted. Make sure you copied the firebaseConfig block from Firebase.');
+    return;
   }
+
+  saveFirebaseConfig(config);
+  initFirebase();
+  closeModal();
+  alert('Firebase connected! Cloud sync is now active.');
 }
 
 function initFirebase() {
