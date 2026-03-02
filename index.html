@@ -385,33 +385,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 .classify-sm:hover{border-color:var(--accent);color:var(--accent)}
 .classify-sm-active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-/* ===== PHOTO IMPORT ===== */
-.photo-drop-zone{
-  border:2.5px dashed var(--border2);border-radius:var(--radius);
-  padding:40px 20px;text-align:center;cursor:pointer;
-  transition:all .2s;background:var(--surface2);
-}
-.photo-drop-zone:hover,.photo-drop-zone.drag-hover{
-  border-color:var(--accent);background:var(--accent-dim);
-}
-.photo-result-card{
-  background:var(--surface2);border-radius:var(--radius-sm);padding:16px;
-}
-.photo-result-card h3{font-family:'DM Sans',system-ui,sans-serif;font-size:18px;font-weight:700;margin-bottom:4px}
-.photo-meal-type-row{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
-.photo-ing-list{list-style:none;padding:0;margin:10px 0}
-.photo-ing-list li{
-  padding:4px 0;font-size:12px;color:var(--text);
-  display:flex;align-items:center;gap:6px;
-}
-.photo-ing-list li::before{content:'•';color:var(--accent);font-weight:bold}
-.photo-confidence{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;
-}
-.conf-high{background:var(--green-dim);color:var(--green)}
-.conf-med{background:var(--amber-dim);color:var(--amber)}
-.conf-low{background:var(--red-dim);color:var(--red)}
+/* ===== LOADING SPINNER ===== */
 .ai-loading{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--accent)}
 .ai-loading .spinner{
   width:14px;height:14px;border:2px solid var(--accent-dim);border-top-color:var(--accent);
@@ -527,7 +501,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 [data-theme="dark"] .search-box input{background:var(--surface2)}
 
 /* ===== COOKBOOK ANIMATION ===== */
-.cookbook-anim{padding:10px 0 6px;overflow:visible}
+.cookbook-anim{padding:4px 0 2px;overflow:visible}
 .cookbook-anim svg{opacity:0;animation:bookFadeIn .4s ease-out forwards;overflow:visible}
 .cookbook-anim .book-pages{
   transform-origin:50% 100%;
@@ -546,7 +520,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 @keyframes sparkle{from{opacity:0}to{opacity:1}}
 
 /* ===== PLANNER ANIMATION ===== */
-.planner-anim{padding:10px 0 6px;overflow:hidden}
+.planner-anim{padding:4px 0 2px;overflow:hidden}
 .planner-anim svg{opacity:0;animation:plannerFadeIn .4s ease-out forwards}
 .planner-anim .cal-body{animation:calDrop .5s ease-out .05s both}
 .planner-anim .cal-header{animation:calDrop .5s ease-out .05s both}
@@ -557,7 +531,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 @keyframes dotsAppear{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 
 /* ===== GROCERY ANIMATION ===== */
-.grocery-anim{padding:10px 0 6px;overflow:hidden}
+.grocery-anim{padding:4px 0 2px;overflow:hidden}
 .grocery-anim svg{opacity:0;animation:cartFadeIn .3s ease-out forwards}
 .grocery-anim .cart-group{animation:cartRoll .6s ease-out .1s both}
 .grocery-anim .cart-list{opacity:0;animation:listFloat .4s ease-out .15s forwards}
@@ -669,7 +643,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   <!-- COOKBOOK PANEL -->
   <div class="panel active" id="panel-cookbook">
     <div id="cookbookOpenAnim" class="cookbook-anim">
-      <svg viewBox="0 0 220 150" width="200" height="136" style="display:block;margin:0 auto">
+      <svg viewBox="0 0 220 150" width="120" height="82" style="display:block;margin:0 auto">
         <!-- Book cover (back) -->
         <rect class="book-cover" x="40" y="30" width="140" height="110" rx="6" fill="var(--accent)" opacity="0.15"/>
         <!-- Book spine -->
@@ -753,7 +727,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   <!-- PLANNER PANEL -->
   <div class="panel" id="panel-planner">
     <div id="plannerOpenAnim" class="planner-anim">
-      <svg viewBox="0 0 200 150" width="180" height="135" style="display:block;margin:0 auto">
+      <svg viewBox="0 0 200 150" width="130" height="98" style="display:block;margin:0 auto">
         <!-- Calendar body -->
         <rect class="cal-body" x="30" y="35" width="140" height="105" rx="8" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
         <!-- Calendar header bar -->
@@ -850,7 +824,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   <!-- GROCERY PANEL -->
   <div class="panel" id="panel-grocery">
     <div id="groceryOpenAnim" class="grocery-anim">
-      <svg viewBox="0 0 260 130" width="220" height="110" style="display:block;margin:0 auto">
+      <svg viewBox="0 0 260 130" width="150" height="75" style="display:block;margin:0 auto">
         <!-- Cart body -->
         <g class="cart-group">
           <path d="M45,30 L65,30 L95,95 L195,95 L210,45 L80,45" stroke="var(--text2)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -3520,7 +3494,6 @@ function openBulkImport() {
           <button class="import-tab active" onclick="switchImportTab('paste',this)">📝 Paste List</button>
           <button class="import-tab" onclick="switchImportTab('csv',this)">📄 Upload CSV</button>
           <button class="import-tab" onclick="switchImportTab('ai',this)">🤖 AI Suggest</button>
-          <button class="import-tab" onclick="switchImportTab('photo',this)">Photo Import</button>
         </div>
 
         <!-- PASTE TAB -->
@@ -3576,45 +3549,6 @@ Pancakes"></textarea>
           <div id="aiStatus" style="margin-top:8px"></div>
         </div>
 
-        <!-- PHOTO TAB -->
-        <div id="importTab-photo" style="display:none">
-          <div class="form-row">
-            <label>Upload a photo of a meal</label>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:8px">
-              Take a photo of any dish — AI will identify the meal and suggest ingredients to make it.
-              Works with photos from your camera, screenshots from recipe sites, or pictures from menus.
-            </div>
-            
-            <div id="photoDropZone" class="photo-drop-zone" onclick="document.getElementById('photoFileInput').click()"
-                 ondragover="event.preventDefault();this.classList.add('drag-hover')"
-                 ondragleave="this.classList.remove('drag-hover')"
-                 ondrop="event.preventDefault();this.classList.remove('drag-hover');handlePhotoDrop(event)">
-              <div id="photoDropContent">
-                <div style="font-size:48px;margin-bottom:12px">📸</div>
-                <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px">Click to upload or drag a photo here</div>
-                <div style="font-size:11px;color:var(--text3)">Supports JPG, PNG, WEBP • Max 10MB</div>
-              </div>
-              <input type="file" id="photoFileInput" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelect(event)">
-            </div>
-          </div>
-
-          <div id="photoPreviewArea" style="display:none">
-            <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap">
-              <div style="flex:0 0 200px">
-                <img id="photoPreviewImg" style="width:200px;height:200px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border)">
-              </div>
-              <div style="flex:1;min-width:240px">
-                <div id="photoAnalysisResult"></div>
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-sm btn-secondary" onclick="document.getElementById('photoFileInput').click()">📸 Choose Another Photo</button>
-            <button class="btn btn-sm btn-secondary" id="photoAddBtn" style="display:none" onclick="addPhotoMealToImport()">✓ Add to Import List</button>
-          </div>
-        </div>
-
         <!-- PREVIEW AREA -->
         <div id="importPreview" style="margin-top:20px;display:none">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -3638,7 +3572,7 @@ Pancakes"></textarea>
 function switchImportTab(tab, btn) {
   document.querySelectorAll('.import-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
-  ['paste','csv','ai','photo'].forEach(t => {
+  ['paste','csv','ai'].forEach(t => {
     const el = document.getElementById('importTab-' + t);
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
@@ -4115,271 +4049,8 @@ function confirmBulkImport() {
 }
 
 // ============================================================
-//  PHOTO IMPORT — AI Meal Identification
+//  AI SUGGEST GROCERIES
 // ============================================================
-let currentPhotoMeal = null;
-let currentPhotoBase64 = null;
-
-function handlePhotoSelect(event) {
-  const file = event.target.files[0];
-  if (file) processPhotoFile(file);
-}
-
-function handlePhotoDrop(event) {
-  const file = event.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) processPhotoFile(file);
-}
-
-function processPhotoFile(file) {
-  if (file.size > 10 * 1024 * 1024) {
-    alert('Image too large — max 10MB.');
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const dataUrl = e.target.result;
-    currentPhotoBase64 = dataUrl.split(',')[1];
-    const mediaType = file.type || 'image/jpeg';
-
-    // Show preview
-    document.getElementById('photoPreviewArea').style.display = 'block';
-    document.getElementById('photoPreviewImg').src = dataUrl;
-    document.getElementById('photoAnalysisResult').innerHTML = `
-      <div class="ai-loading" style="font-size:13px">
-        <div class="spinner" style="width:18px;height:18px"></div>
-        Analyzing image with AI...
-      </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:6px">Identifying the dish and building an ingredient list</div>
-    `;
-    document.getElementById('photoAddBtn').style.display = 'none';
-
-    // Call Claude API to identify the meal
-    identifyMealFromPhoto(currentPhotoBase64, mediaType);
-  };
-  reader.readAsDataURL(file);
-}
-
-async function identifyMealFromPhoto(base64Data, mediaType) {
-  const resultEl = document.getElementById('photoAnalysisResult');
-  
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [{
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: mediaType, data: base64Data }
-            },
-            {
-              type: "text",
-              text: `Analyze this food image and respond ONLY with a JSON object (no markdown, no backticks, no preamble). Use this exact format:
-{
-  "name": "Meal Name",
-  "confidence": "high" or "medium" or "low",
-  "description": "Brief 1-sentence description of the dish",
-  "isSide": false,
-  "mealTypes": ["dinner"],
-  "categories": [],
-  "ingredients": ["ingredient 1", "ingredient 2"],
-  "recipe": "Brief recipe steps",
-  "servings": 4,
-  "prepTime": 30
-}
-
-Rules:
-- "name" should be the common name of the dish
-- "confidence" is how sure you are about the identification
-- "isSide" is true if this is a side dish (like green beans, mashed potatoes, salad)
-- "mealTypes" can include "breakfast", "dinner", "snack", "fruit"
-- "categories" can include: "quick" (under 30 min), "slow" (slow cooker), "grill", "onepot", "kid" (kid-friendly), "prep" (meal prep), "takeout"
-- "ingredients" should list all ingredients needed to make this dish, each as a string like "2 lbs chicken breast" or "1 cup rice"
-- "recipe" should be a concise set of instructions
-- "prepTime" in minutes
-- If the image is not food, set name to "Not a food image" and confidence to "low"`
-            }
-          ]
-        }]
-      })
-    });
-
-    const data = await response.json();
-    const text = data.content.map(c => c.text || '').join('');
-    const clean = text.replace(/```json|```/g, '').trim();
-    
-    let parsed;
-    try {
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      // Try to extract JSON from the response
-      const jsonMatch = clean.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('Could not parse AI response');
-      }
-    }
-
-    currentPhotoMeal = parsed;
-    renderPhotoResult(parsed);
-
-  } catch (error) {
-    console.error('Photo analysis error:', error);
-    resultEl.innerHTML = `
-      <div style="color:var(--red);font-weight:600;margin-bottom:8px"> Analysis failed</div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">${error.message || 'Could not analyze the image. Please try again.'}</div>
-      <button class="btn btn-sm btn-secondary" onclick="retryPhotoWithFallback()">Try with built-in database instead</button>
-    `;
-  }
-}
-
-function renderPhotoResult(meal) {
-  const resultEl = document.getElementById('photoAnalysisResult');
-  
-  if (meal.name === 'Not a food image' || meal.confidence === 'low' && !meal.ingredients?.length) {
-    resultEl.innerHTML = `
-      <div style="color:var(--amber);font-weight:600;margin-bottom:8px">🤔 Couldn't identify this as a meal</div>
-      <div style="font-size:12px;color:var(--text3)">Try uploading a clearer photo of a prepared dish.</div>
-    `;
-    return;
-  }
-
-  const confClass = meal.confidence === 'high' ? 'conf-high' : (meal.confidence === 'medium' ? 'conf-med' : 'conf-low');
-  const confLabel = meal.confidence === 'high' ? '✓ High confidence' : (meal.confidence === 'medium' ? '~ Medium confidence' : '? Low confidence');
-
-  resultEl.innerHTML = `
-    <div class="photo-result-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
-        <h3>${meal.name}</h3>
-        <span class="photo-confidence ${confClass}">${confLabel}</span>
-        ${meal.isSide ? '<span class="tag" style="background:var(--green-dim);color:var(--green)">Side Dish</span>' : '<span class="tag" style="background:var(--accent-dim);color:var(--accent)">Main Dish</span>'}
-      </div>
-      ${meal.description ? `<div style="font-size:12px;color:var(--text2);margin-bottom:10px">${meal.description}</div>` : ''}
-      
-      <div class="photo-meal-type-row">
-        ${(meal.mealTypes||[]).map(mt => {const t=MEAL_TYPES.find(x=>x.id===mt);return t?`<span class="tag ${t.cls}">${t.label}</span>`:''}).join('')}
-        ${(meal.categories||[]).map(c => {const cat=CATEGORIES.find(x=>x.id===c);return cat?`<span class="tag ${cat.cls}">${cat.icon} ${cat.label}</span>`:''}).join('')}
-        ${meal.prepTime ? `<span class="tag" style="background:var(--surface3);color:var(--text3)">⏱ ${meal.prepTime} min</span>` : ''}
-        ${meal.servings ? `<span class="tag" style="background:var(--surface3);color:var(--text3)">👥 ${meal.servings} servings</span>` : ''}
-      </div>
-
-      <div style="margin-top:10px">
-        <label style="font-size:11px">Ingredients (${(meal.ingredients||[]).length})</label>
-        <ul class="photo-ing-list">
-          ${(meal.ingredients||[]).map(ing => `<li>${ing}</li>`).join('')}
-        </ul>
-      </div>
-
-      ${meal.recipe ? `
-        <div style="margin-top:10px">
-          <label style="font-size:11px">Quick Recipe</label>
-          <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:4px;background:var(--surface);padding:10px;border-radius:var(--radius-sm)">${meal.recipe}</div>
-        </div>
-      ` : ''}
-      
-      <div style="margin-top:12px">
-        <label style="font-size:11px">Edit name if needed:</label>
-        <input type="text" id="photoMealName" value="${meal.name}" style="margin-top:4px">
-      </div>
-
-      <div style="margin-top:10px;display:flex;gap:6px">
-        <button class="classify-btn ${!meal.isSide ? 'classify-active classify-main' : ''}" 
-                onclick="currentPhotoMeal.isSide=false;renderPhotoResult(currentPhotoMeal)">🍖 Main Dish</button>
-        <button class="classify-btn ${meal.isSide ? 'classify-active classify-side' : ''}" 
-                onclick="currentPhotoMeal.isSide=true;renderPhotoResult(currentPhotoMeal)">🥗 Side Dish</button>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('photoAddBtn').style.display = 'inline-flex';
-}
-
-function addPhotoMealToImport() {
-  if (!currentPhotoMeal) return;
-  
-  // Get possibly edited name
-  const editedName = document.getElementById('photoMealName')?.value?.trim() || currentPhotoMeal.name;
-  
-  const meal = {
-    name: editedName,
-    ingredients: currentPhotoMeal.ingredients || [],
-    mealTypes: currentPhotoMeal.mealTypes || [],
-    isSide: currentPhotoMeal.isSide || false,
-    categories: currentPhotoMeal.categories || [],
-    prepTime: currentPhotoMeal.prepTime || null,
-    servings: currentPhotoMeal.servings || null,
-    recipe: currentPhotoMeal.recipe || '',
-    defaultSide: '',
-    selected: true,
-    isDuplicate: state.meals.some(m => m.name.toLowerCase() === editedName.toLowerCase()),
-    aiMatched: true,
-    photoImport: true,
-  };
-
-  bulkImportData.push(meal);
-  renderImportPreview();
-
-  // Reset photo area for next upload
-  document.getElementById('photoAnalysisResult').innerHTML = `
-    <div style="color:var(--green);font-weight:600">✓ ${editedName} added to import list!</div>
-    <div style="font-size:12px;color:var(--text3);margin-top:4px">Upload another photo or review your import list below.</div>
-  `;
-  document.getElementById('photoAddBtn').style.display = 'none';
-  currentPhotoMeal = null;
-}
-
-function retryPhotoWithFallback() {
-  // Fallback: let user type the meal name and use the built-in DB
-  document.getElementById('photoAnalysisResult').innerHTML = `
-    <div class="form-row">
-      <label>What is this dish?</label>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="photoFallbackName" placeholder="Type the meal name...">
-        <button class="btn btn-primary btn-sm" onclick="fallbackPhotoLookup()">Look Up</button>
-      </div>
-    </div>
-  `;
-}
-
-function fallbackPhotoLookup() {
-  const name = document.getElementById('photoFallbackName').value.trim();
-  if (!name) return;
-
-  const key = name.toLowerCase();
-  let match = RECIPE_DB[key];
-  if (!match) {
-    const dbKeys = Object.keys(RECIPE_DB);
-    const partial = dbKeys.find(k => key.includes(k) || k.includes(key));
-    if (partial) match = RECIPE_DB[partial];
-  }
-
-  const lower = name.toLowerCase();
-  let autoType = ['dinner'];
-  if (/pancake|waffle|french toast|oatmeal|scrambled|bacon.*egg|breakfast|cereal/i.test(lower)) autoType = ['breakfast'];
-  else if (/chip|cracker|trail mix|granola|popcorn|pretzel|hummus|dip|cookie|brownie|muffin|yogurt|snack/i.test(lower)) autoType = ['snack'];
-  else if (/\b(apple|banana|orange|grape|strawberr|blueberr|raspberr|mango|pineapple|watermelon|peach|pear|kiwi|cherry|berries|fruit|clementine)\b/i.test(lower)) autoType = ['fruit'];
-
-  currentPhotoMeal = {
-    name: name,
-    confidence: match ? 'medium' : 'low',
-    description: '',
-    isSide: false,
-    mealTypes: autoType,
-    categories: [],
-    ingredients: match || [],
-    recipe: '',
-    servings: 4,
-    prepTime: null,
-  };
-
-  renderPhotoResult(currentPhotoMeal);
-}
 
 // ============================================================
 //  AI SUGGEST GROCERIES
