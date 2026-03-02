@@ -69,12 +69,12 @@ body{
 body::before{
   content:'';position:fixed;top:0;left:0;width:100%;height:100%;
   pointer-events:none;z-index:0;
-  opacity:0.04;
+  opacity:0.08;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'%3E%3Ctext x='20' y='45' font-size='32' fill='%23666'%3E🍳%3C/text%3E%3Ctext x='100' y='40' font-size='28' fill='%23666'%3E🥗%3C/text%3E%3Ctext x='180' y='50' font-size='30' fill='%23666'%3E🍕%3C/text%3E%3Ctext x='250' y='35' font-size='26' fill='%23666'%3E🧅%3C/text%3E%3Ctext x='55' y='100' font-size='30' fill='%23666'%3E🥩%3C/text%3E%3Ctext x='145' y='95' font-size='28' fill='%23666'%3E🍝%3C/text%3E%3Ctext x='225' y='105' font-size='32' fill='%23666'%3E🫑%3C/text%3E%3Ctext x='10' y='155' font-size='28' fill='%23666'%3E🧀%3C/text%3E%3Ctext x='85' y='160' font-size='30' fill='%23666'%3E🥕%3C/text%3E%3Ctext x='170' y='150' font-size='26' fill='%23666'%3E🍋%3C/text%3E%3Ctext x='240' y='165' font-size='30' fill='%23666'%3E🌽%3C/text%3E%3Ctext x='35' y='215' font-size='26' fill='%23666'%3E🍗%3C/text%3E%3Ctext x='120' y='220' font-size='30' fill='%23666'%3E🥘%3C/text%3E%3Ctext x='200' y='210' font-size='28' fill='%23666'%3E🍞%3C/text%3E%3Ctext x='65' y='265' font-size='28' fill='%23666'%3E🧄%3C/text%3E%3Ctext x='155' y='270' font-size='30' fill='%23666'%3E🍅%3C/text%3E%3Ctext x='235' y='260' font-size='26' fill='%23666'%3E🥬%3C/text%3E%3C/svg%3E");
   background-repeat:repeat;
   background-size:280px 280px;
 }
-[data-theme="dark"] body::before{opacity:0.03}
+[data-theme="dark"] body::before{opacity:0.06}
 body > *{position:relative;z-index:1}
 h1,h2,h3,.brand{font-family:'DM Sans',system-ui,sans-serif;font-weight:700}
 .brand h1{font-family:'DM Serif Display',Georgia,serif;font-weight:400}
@@ -93,7 +93,7 @@ h1,h2,h3,.brand{font-family:'DM Sans',system-ui,sans-serif;font-weight:700}
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 2px 8px rgba(37,99,235,.2);
 }
-.brand h1{font-size:22px;font-weight:400;color:var(--text);letter-spacing:-0.5px}
+.brand h1{font-size:28px;font-weight:400;color:var(--text);letter-spacing:-0.5px}
 .brand p{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-top:2px;font-weight:500}
 
 /* ===== NAV TABS ===== */
@@ -501,27 +501,8 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 [data-theme="dark"] .brand p{color:var(--text3)}
 [data-theme="dark"] .search-box input{background:var(--surface2)}
 
-/* ===== COOKBOOK ANIMATION ===== */
-.cookbook-anim{padding:4px 0 2px;overflow:visible}
-.cookbook-anim svg{opacity:0;animation:bookFadeIn .4s ease-out forwards;overflow:visible}
-.cookbook-anim .book-pages{
-  transform-origin:50% 100%;
-  animation:pagesOpen .5s ease-out .1s both;
-}
-.cookbook-anim .food-pop-1{opacity:0;animation:foodPop .4s cubic-bezier(.2,.8,.3,1.4) .3s forwards}
-.cookbook-anim .food-pop-2{opacity:0;animation:foodPop .4s cubic-bezier(.2,.8,.3,1.4) .4s forwards}
-.cookbook-anim .food-pop-3{opacity:0;animation:foodPop .4s cubic-bezier(.2,.8,.3,1.4) .45s forwards}
-.cookbook-anim .food-pop-4{opacity:0;animation:foodPop .35s cubic-bezier(.2,.8,.3,1.4) .5s forwards}
-.cookbook-anim .food-pop-5{opacity:0;animation:foodPop .35s cubic-bezier(.2,.8,.3,1.4) .55s forwards}
-.cookbook-anim .food-pop-6{opacity:0;animation:foodPop .3s cubic-bezier(.2,.8,.3,1.4) .6s forwards}
-.cookbook-anim .sparkles{opacity:0;animation:sparkle .5s ease-out .65s forwards}
-@keyframes bookFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pagesOpen{from{transform:scaleY(0.3);opacity:0}to{transform:scaleY(1);opacity:1}}
-@keyframes foodPop{from{opacity:0;transform:translateY(20px) scale(0.3)}to{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes sparkle{from{opacity:0}to{opacity:1}}
-
 /* ===== PLANNER ANIMATION ===== */
-.planner-anim{padding:4px 0 2px;overflow:hidden}
+.planner-anim{padding:2px 0 0;overflow:hidden;margin:0;text-align:center}
 .planner-anim svg{opacity:0;animation:plannerFadeIn .4s ease-out forwards}
 .planner-anim .cal-body{animation:calDrop .5s ease-out .05s both}
 .planner-anim .cal-header{animation:calDrop .5s ease-out .05s both}
@@ -532,7 +513,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 @keyframes dotsAppear{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 
 /* ===== GROCERY ANIMATION ===== */
-.grocery-anim{padding:4px 0 2px;overflow:hidden}
+.grocery-anim{padding:2px 0 0;overflow:hidden;margin:0;text-align:center}
 .grocery-anim svg{opacity:0;animation:cartFadeIn .3s ease-out forwards}
 .grocery-anim .cart-group{animation:cartRoll .6s ease-out .1s both}
 .grocery-anim .cart-list{opacity:0;animation:listFloat .4s ease-out .15s forwards}
@@ -643,44 +624,6 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 
   <!-- COOKBOOK PANEL -->
   <div class="panel active" id="panel-cookbook">
-    <div id="cookbookOpenAnim" class="cookbook-anim">
-      <svg viewBox="0 0 220 150" width="120" height="82" style="display:block;margin:0 auto">
-        <!-- Book cover (back) -->
-        <rect class="book-cover" x="40" y="30" width="140" height="110" rx="6" fill="var(--accent)" opacity="0.15"/>
-        <!-- Book spine -->
-        <rect x="40" y="30" width="12" height="110" rx="3" fill="var(--accent)" opacity="0.7"/>
-        <!-- Open pages -->
-        <g class="book-pages">
-          <path d="M52,30 L52,140 Q110,132 170,140 L170,30 Q110,22 52,30 Z" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
-          <!-- Page fold line -->
-          <path d="M111,28 L111,138" stroke="var(--border)" stroke-width="1" opacity="0.4"/>
-          <!-- Text lines left page -->
-          <line x1="62" y1="50" x2="105" y2="50" stroke="var(--surface3)" stroke-width="2" stroke-linecap="round"/>
-          <line x1="62" y1="62" x2="98" y2="62" stroke="var(--surface3)" stroke-width="2" stroke-linecap="round"/>
-          <line x1="62" y1="74" x2="102" y2="74" stroke="var(--surface3)" stroke-width="2" stroke-linecap="round"/>
-          <line x1="62" y1="86" x2="90" y2="86" stroke="var(--surface3)" stroke-width="2" stroke-linecap="round"/>
-          <!-- Text lines right page -->
-          <line x1="118" y1="50" x2="162" y2="50" stroke="var(--surface3)" stroke-width="2" stroke-linecap="round"/>
-          <line x1="118" y1="62" x2="155" y2="62" stroke="var(--surface3)" stroke-width="2" stroke-linecap="round"/>
-          <line x1="118" y1="74" x2="160" y2="74" stroke="var(--surface3)" stroke-width="2" stroke-linecap="round"/>
-        </g>
-        <!-- Food popping out of book -->
-        <g class="food-pop-1"><text x="70" y="28" font-size="24">🍕</text></g>
-        <g class="food-pop-2"><text x="105" y="18" font-size="28">🍗</text></g>
-        <g class="food-pop-3"><text x="145" y="25" font-size="22">🥗</text></g>
-        <g class="food-pop-4"><text x="55" y="12" font-size="18">🌮</text></g>
-        <g class="food-pop-5"><text x="135" y="8" font-size="20">🍳</text></g>
-        <g class="food-pop-6"><text x="90" y="5" font-size="16">🥩</text></g>
-        <!-- Steam / sparkle effects -->
-        <g class="sparkles">
-          <circle cx="80" cy="15" r="2" fill="var(--amber)" opacity="0.6"/>
-          <circle cx="130" cy="10" r="2.5" fill="var(--accent)" opacity="0.5"/>
-          <circle cx="155" cy="18" r="1.5" fill="var(--green)" opacity="0.6"/>
-          <circle cx="65" cy="8" r="2" fill="var(--accent)" opacity="0.4"/>
-          <circle cx="115" cy="3" r="1.5" fill="var(--amber)" opacity="0.5"/>
-        </g>
-      </svg>
-    </div>
     <div class="cookbook-header">
       <h2>📖 My Cookbook</h2>
       <div class="search-box">
@@ -728,7 +671,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   <!-- PLANNER PANEL -->
   <div class="panel" id="panel-planner">
     <div id="plannerOpenAnim" class="planner-anim">
-      <svg viewBox="0 0 200 150" width="130" height="98" style="display:block;margin:0 auto">
+      <svg viewBox="0 0 200 150" width="80" height="60" style="display:block;margin:0 auto">
         <!-- Calendar body -->
         <rect class="cal-body" x="30" y="35" width="140" height="105" rx="8" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
         <!-- Calendar header bar -->
@@ -825,7 +768,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   <!-- GROCERY PANEL -->
   <div class="panel" id="panel-grocery">
     <div id="groceryOpenAnim" class="grocery-anim">
-      <svg viewBox="0 0 260 130" width="150" height="75" style="display:block;margin:0 auto">
+      <svg viewBox="0 0 260 130" width="100" height="50" style="display:block;margin:0 auto">
         <!-- Cart body -->
         <g class="cart-group">
           <path d="M45,30 L65,30 L95,95 L195,95 L210,45 L80,45" stroke="var(--text2)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -1568,7 +1511,6 @@ function switchTab(tab) {
   event.target.closest('.nav-btn').classList.add('active');
   
   if (tab === 'cookbook') {
-    replayAnim('cookbookOpenAnim');
     renderCookbook();
   }
   if (tab === 'planner') {
