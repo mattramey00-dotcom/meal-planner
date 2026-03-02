@@ -75,7 +75,8 @@ body::before{
 }
 [data-theme="dark"] body::before{opacity:0.03}
 body > *{position:relative;z-index:1}
-h1,h2,h3,.brand{font-family:'DM Serif Display',Georgia,serif}
+h1,h2,h3,.brand{font-family:'DM Sans',system-ui,sans-serif;font-weight:700}
+.brand h1{font-family:'DM Serif Display',Georgia,serif;font-weight:400}
 
 /* ===== APP SHELL ===== */
 .app{max-width:1200px;margin:0 auto;padding:20px}
@@ -209,7 +210,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   padding:18px;cursor:pointer;transition:all .2s;position:relative;
 }
 .meal-card:hover{border-color:var(--border2);box-shadow:var(--shadow-lg);transform:translateY(-1px)}
-.meal-card-name{font-family:'DM Serif Display',Georgia,serif;font-size:16px;font-weight:400;margin-bottom:8px}
+.meal-card-name{font-family:'DM Sans',system-ui,sans-serif;font-size:16px;font-weight:600;margin-bottom:8px}
 .meal-card-meta{font-size:11px;color:var(--text3);margin-bottom:10px}
 .meal-card-tags{display:flex;flex-wrap:wrap;gap:4px}
 .meal-card-actions{
@@ -219,7 +220,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 .meal-empty{
   text-align:center;padding:60px 20px;color:var(--text3);
 }
-.meal-empty h3{font-family:'DM Serif Display',Georgia,serif;font-size:20px;margin-bottom:8px;color:var(--text2)}
+.meal-empty h3{font-family:'DM Sans',system-ui,sans-serif;font-size:20px;font-weight:700;margin-bottom:8px;color:var(--text2)}
 
 /* ===== ADD/EDIT MEAL MODAL ===== */
 .modal-overlay{
@@ -233,7 +234,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   padding:28px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;
   box-shadow:var(--shadow-lg);
 }
-.modal h2{font-family:'DM Serif Display',Georgia,serif;font-size:20px;margin-bottom:20px}
+.modal h2{font-family:'DM Sans',system-ui,sans-serif;font-size:20px;font-weight:700;margin-bottom:20px}
 .form-row{margin-bottom:16px}
 .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .tag-select{display:flex;flex-wrap:wrap;gap:6px}
@@ -396,7 +397,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 .photo-result-card{
   background:var(--surface2);border-radius:var(--radius-sm);padding:16px;
 }
-.photo-result-card h3{font-family:'DM Serif Display',Georgia,serif;font-size:18px;margin-bottom:4px}
+.photo-result-card h3{font-family:'DM Sans',system-ui,sans-serif;font-size:18px;font-weight:700;margin-bottom:4px}
 .photo-meal-type-row{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
 .photo-ing-list{list-style:none;padding:0;margin:10px 0}
 .photo-ing-list li{
@@ -443,7 +444,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 .grocery-text{flex:1}
 .grocery-qty{color:var(--text3);font-size:12px;font-weight:500}
 .grocery-empty{text-align:center;padding:60px 20px;color:var(--text3)}
-.grocery-empty h3{font-family:'DM Serif Display',Georgia,serif;font-size:20px;margin-bottom:8px;color:var(--text2)}
+.grocery-empty h3{font-family:'DM Sans',system-ui,sans-serif;font-size:20px;font-weight:700;margin-bottom:8px;color:var(--text2)}
 
 /* ===== SHOP LINKS ===== */
 .shop-links{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
@@ -524,6 +525,20 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 [data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3{color:var(--text)}
 [data-theme="dark"] .brand p{color:var(--text3)}
 [data-theme="dark"] .search-box input{background:var(--surface2)}
+
+/* ===== ACTION CARDS ===== */
+.action-card{
+  cursor:pointer;text-align:center;flex:1;min-width:140px;
+  transition:transform .15s;
+}
+.action-card:hover{transform:translateY(-1px)}
+.action-card-btn{
+  padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;
+  font-family:'DM Sans',system-ui,sans-serif;
+}
+.action-card-desc{
+  font-size:11px;color:var(--text3);margin-top:5px;line-height:1.3;
+}
 
 /* ===== SYNC BAR ===== */
 .sync-bar{
@@ -610,12 +625,20 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   <!-- COOKBOOK PANEL -->
   <div class="panel active" id="panel-cookbook">
     <div class="cookbook-header">
-      <h2>My Cookbook</h2>
+      <h2>📖 My Cookbook</h2>
       <div class="search-box">
         <input type="text" placeholder="Search meals..." id="searchMeals" oninput="renderCookbook()">
       </div>
-      <button class="btn btn-primary" onclick="openMealModal()">+ Add Meal</button>
-      <button class="btn btn-secondary" onclick="openBulkImport()">Bulk Import</button>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <div class="action-card" onclick="openMealModal()">
+        <div class="action-card-btn" style="background:var(--accent);color:#fff">+ Add Meal or Item</div>
+        <div class="action-card-desc">Add a single meal, side, or item to your cookbook</div>
+      </div>
+      <div class="action-card" onclick="openBulkImport()">
+        <div class="action-card-btn" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border)">Bulk Item Import</div>
+        <div class="action-card-desc">Add multiple items at once from a list or AI</div>
+      </div>
     </div>
     <div id="syncBar_cookbook" class="sync-bar" style="display:none">
       <div class="sync-bar-info">
@@ -627,14 +650,21 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
         <button id="undoBtn_cookbook" class="sync-btn sync-btn-undo" onclick="revertSection('cookbook')" title="Discard your changes and restore the last version saved to the cloud">Undo Changes</button>
       </div>
     </div>
-    <div class="filter-row" id="filterRow"></div>
+    <div style="margin-bottom:16px">
+      <button class="btn btn-secondary btn-sm" id="filterToggleBtn" onclick="toggleFilters()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:13px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        <span id="filterToggleText">Filter</span>
+      </button>
+      <span id="activeFilterLabel" style="font-size:12px;color:var(--accent);font-weight:600;margin-left:10px"></span>
+    </div>
+    <div class="filter-row" id="filterRow" style="display:none"></div>
     <div id="cookbookGrid"></div>
   </div>
 
   <!-- PLANNER PANEL -->
   <div class="panel" id="panel-planner">
     <div class="planner-header">
-      <h2>This Week's Menu</h2>
+      <h2>📅 This Week's Menu</h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="autoGenerate()">Auto-Generate Dinners</button>
         <button class="btn btn-secondary" onclick="clearWeek()">Clear Week</button>
@@ -692,7 +722,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   <!-- GROCERY PANEL -->
   <div class="panel" id="panel-grocery">
     <div class="grocery-header">
-      <h2>Grocery List</h2>
+      <h2>🛒 Grocery List</h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="generateGroceryList()">Generate from Menu</button>
         <button class="btn btn-primary" onclick="aiSuggestGroceries()">AI Suggest Ingredients</button>
@@ -776,7 +806,7 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   <!-- WHAT CAN I COOK PANEL -->
   <div class="panel" id="panel-whatcook">
     <div class="cookbook-header">
-      <h2>What Can I Cook?</h2>
+      <h2>🍳 What Can I Cook?</h2>
     </div>
     <div class="card" style="margin-bottom:20px">
       <label>What ingredients do you have on hand?</label>
@@ -1418,6 +1448,41 @@ function switchTab(tab) {
 // ============================================================
 let activeFilter = 'all';
 let activeMealType = 'all';
+let filtersExpanded = false;
+
+function toggleFilters() {
+  filtersExpanded = !filtersExpanded;
+  const row = document.getElementById('filterRow');
+  const text = document.getElementById('filterToggleText');
+  if (filtersExpanded) {
+    row.style.display = 'flex';
+    text.textContent = 'Hide Filters';
+  } else {
+    row.style.display = 'none';
+    text.textContent = 'Filter';
+  }
+}
+
+function updateActiveFilterLabel() {
+  const label = document.getElementById('activeFilterLabel');
+  if (!label) return;
+  if (activeFilter === 'all' && activeMealType === 'all') {
+    label.textContent = '';
+  } else {
+    const parts = [];
+    if (activeMealType !== 'all') {
+      const mt = MEAL_TYPES.find(m => m.id === activeMealType);
+      if (mt) parts.push(mt.label);
+    }
+    if (activeFilter === 'sides') parts.push('Sides');
+    else if (activeFilter === 'fruit') parts.push('Fruit');
+    else if (activeFilter !== 'all') {
+      const cat = CATEGORIES.find(c => c.id === activeFilter);
+      if (cat) parts.push(cat.icon + ' ' + cat.label);
+    }
+    label.textContent = parts.length ? 'Showing: ' + parts.join(' + ') : '';
+  }
+}
 
 function renderFilterRow() {
   const row = document.getElementById('filterRow');
@@ -1432,6 +1497,7 @@ function renderFilterRow() {
     html += `<button class="filter-btn ${activeFilter===c.id?'active':''}" onclick="setFilter('${c.id}')">${c.icon} ${c.label}</button>`;
   });
   row.innerHTML = html;
+  updateActiveFilterLabel();
 }
 
 function setFilter(f) {
@@ -1699,7 +1765,7 @@ function renderPlanner() {
       const meal = mealId ? state.meals.find(m => m.id === mealId) : null;
       html += `<div class="card" style="margin-bottom:8px;padding:14px;${isToday?'border-color:var(--accent);border-width:2px':''}">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-family:'DM Serif Display',Georgia,serif;font-size:13px;font-weight:600;min-width:60px;${isToday?'color:var(--accent)':''}">${day.substring(0,3)}${isToday?' ●':''}</div>
+          <div style="font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;min-width:60px;${isToday?'color:var(--accent)':''}">${day.substring(0,3)}${isToday?' ●':''}</div>
           <div style="flex:1">${renderDinnerSlot(key, meal)}</div>
         </div>
       </div>`;
@@ -3115,7 +3181,7 @@ function findMeals() {
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
               <div class="meal-card-name" style="margin:0">${s.meal.name}</div>
               <div style="text-align:right">
-                <div style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:700;color:${pctColor}">${s.matchPct}%</div>
+                <div style="font-family:'DM Sans',system-ui,sans-serif;font-size:22px;font-weight:700;color:${pctColor}">${s.matchPct}%</div>
                 <div style="font-size:9px;color:${pctColor};font-weight:600">${pctLabel}</div>
               </div>
             </div>
