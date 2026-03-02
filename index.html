@@ -4575,4 +4575,56 @@ function processImport(jsonString) {
     if (importedState.groceryChecked) state.groceryChecked = importedState.groceryChecked;
     if (importedState.householdItems) state.householdItems = importedState.householdItems;
     if (importedState.miscFoodItems) state.miscFoodItems = importedState.miscFoodItems;
-    if (importedState.blockedPairings) state.blockedPairings = importedState.blockedPairing
+    if (importedState.blockedPairings) state.blockedPairings = importedState.blockedPairings;
+    if (importedState.purchaseHistory) state.purchaseHistory = importedState.purchaseHistory;
+    
+    alert(`Merged ${newMeals.length} new meals into your cookbook (${newMeals.length} added, ${importedState.meals.length - newMeals.length} already existed).`);
+  } else {
+    // Full replace
+    Object.assign(state, importedState);
+    alert(`Data imported successfully. ${mealCount} meals loaded.`);
+  }
+  
+  saveState();
+  closeModal();
+  renderCookbook();
+}
+
+// ============================================================
+//  THEME
+// ============================================================
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('mealPlannerTheme', next);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('mealPlannerTheme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+}
+initTheme();
+
+// ============================================================
+//  INIT
+// ============================================================
+initFirebase();
+showSetupScreen();
+if (!document.getElementById('setupScreen')) renderCookbook();
+cleanPurchaseHistory();
+
+// Re-render on resize for mobile/desktop planner switch
+window.addEventListener('resize', () => {
+  if (document.getElementById('panel-planner').classList.contains('active')) {
+    renderPlanner();
+  }
+});
+</script>
+</body>
+</html>
