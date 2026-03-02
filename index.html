@@ -508,6 +508,28 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 [data-theme="dark"] .brand p{color:var(--text3)}
 [data-theme="dark"] .search-box input{background:var(--surface2)}
 
+/* ===== SYNC BAR ===== */
+.sync-bar{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  background:var(--amber-dim);border:1.5px solid var(--amber);border-radius:var(--radius);
+  padding:10px 16px;margin-bottom:16px;
+}
+.sync-bar-info{display:flex;align-items:center;gap:8px}
+.sync-bar-dot{width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0}
+.sync-bar-text{font-size:12px;color:var(--text2);font-weight:500}
+.sync-bar-actions{display:flex;gap:8px}
+.sync-btn{
+  border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600;
+  cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;
+  transition:all .15s;min-height:40px;
+}
+.sync-btn-save{background:var(--accent);color:#fff}
+.sync-btn-save:hover{opacity:0.9}
+.sync-btn-undo{background:var(--surface);color:var(--text2);border:1.5px solid var(--border)}
+.sync-btn-undo:hover{border-color:var(--text3)}
+[data-theme="dark"] .sync-bar{background:rgba(217,119,6,.1);border-color:rgba(217,119,6,.3)}
+[data-theme="dark"] .sync-btn-undo{background:var(--surface2);border-color:var(--border)}
+
 /* ===== RESPONSIVE ===== */
 @media(max-width:768px){
   .app{padding:12px}
@@ -571,10 +593,16 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
       </div>
       <button class="btn btn-primary" onclick="openMealModal()">+ Add Meal</button>
       <button class="btn btn-secondary" onclick="openBulkImport()">Bulk Import</button>
-      <button id="saveBtn_cookbook" class="btn btn-primary btn-sm" onclick="syncSectionToCloud('cookbook')" 
-              style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Save to Cloud</button>
-      <button id="undoBtn_cookbook" class="btn btn-secondary btn-sm" onclick="revertSection('cookbook')" 
-              style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Undo</button>
+    </div>
+    <div id="syncBar_cookbook" class="sync-bar" style="display:none">
+      <div class="sync-bar-info">
+        <span class="sync-bar-dot"></span>
+        <span class="sync-bar-text">You have unsaved cookbook changes</span>
+      </div>
+      <div class="sync-bar-actions">
+        <button id="saveBtn_cookbook" class="sync-btn sync-btn-save" onclick="syncSectionToCloud('cookbook')" title="Push your cookbook changes to the cloud so other devices can see them">Save to Cloud</button>
+        <button id="undoBtn_cookbook" class="sync-btn sync-btn-undo" onclick="revertSection('cookbook')" title="Discard your changes and restore the last version saved to the cloud">Undo Changes</button>
+      </div>
     </div>
     <div class="filter-row" id="filterRow"></div>
     <div id="cookbookGrid"></div>
@@ -588,10 +616,16 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
         <button class="btn btn-primary" onclick="autoGenerate()">Auto-Generate Dinners</button>
         <button class="btn btn-secondary" onclick="clearWeek()">Clear Week</button>
         <button class="btn btn-sm btn-ghost" onclick="openBlockedPairings()" title="Manage blocked pairings">Blocked Pairings</button>
-        <button id="saveBtn_planner" class="btn btn-primary btn-sm" onclick="syncSectionToCloud('planner')" 
-                style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Save to Cloud</button>
-        <button id="undoBtn_planner" class="btn btn-secondary btn-sm" onclick="revertSection('planner')" 
-                style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Undo</button>
+      </div>
+    </div>
+    <div id="syncBar_planner" class="sync-bar" style="display:none">
+      <div class="sync-bar-info">
+        <span class="sync-bar-dot"></span>
+        <span class="sync-bar-text">You have unsaved planner changes</span>
+      </div>
+      <div class="sync-bar-actions">
+        <button id="saveBtn_planner" class="sync-btn sync-btn-save" onclick="syncSectionToCloud('planner')" title="Push your planner changes to the cloud so other devices can see them">Save to Cloud</button>
+        <button id="undoBtn_planner" class="sync-btn sync-btn-undo" onclick="revertSection('planner')" title="Discard your changes and restore the last version saved to the cloud">Undo Changes</button>
       </div>
     </div>
 
@@ -642,10 +676,16 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
         <button class="btn btn-secondary" onclick="clearGroceryChecks()">Uncheck All</button>
         <button class="btn btn-secondary" onclick="clearGroceryList()" style="color:var(--red)">Clear List</button>
         <button class="btn btn-secondary" onclick="copyGroceryList()">Copy List</button>
-        <button id="saveBtn_grocery" class="btn btn-primary btn-sm" onclick="syncSectionToCloud('grocery')" 
-                style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Save to Cloud</button>
-        <button id="undoBtn_grocery" class="btn btn-secondary btn-sm" onclick="revertSection('grocery')" 
-                style="display:none;align-items:center;gap:4px;padding:6px 12px;font-size:11px;white-space:nowrap">Undo</button>
+      </div>
+    </div>
+    <div id="syncBar_grocery" class="sync-bar" style="display:none">
+      <div class="sync-bar-info">
+        <span class="sync-bar-dot"></span>
+        <span class="sync-bar-text">You have unsaved grocery changes</span>
+      </div>
+      <div class="sync-bar-actions">
+        <button id="saveBtn_grocery" class="sync-btn sync-btn-save" onclick="syncSectionToCloud('grocery')" title="Push your grocery changes to the cloud so other devices can see them">Save to Cloud</button>
+        <button id="undoBtn_grocery" class="sync-btn sync-btn-undo" onclick="revertSection('grocery')" title="Discard your changes and restore the last version saved to the cloud">Undo Changes</button>
       </div>
     </div>
     
@@ -1249,13 +1289,17 @@ function syncSectionToCloud(section) {
   
   db.ref('mealPlanner/' + section).set(data).then(() => {
     unsavedSections.delete(section);
-    updateSectionSaveButtons();
-    // Brief green flash on button
-    const btn = document.getElementById('saveBtn_' + section);
-    if (btn) {
-      btn.textContent = 'Saved!';
-      btn.style.background = 'var(--green)';
+    // Brief green flash on the bar
+    const bar = document.getElementById('syncBar_' + section);
+    if (bar) {
+      bar.style.background = 'var(--green-dim)';
+      bar.style.borderColor = 'var(--green)';
+      bar.querySelector('.sync-bar-dot').style.background = 'var(--green)';
+      bar.querySelector('.sync-bar-text').textContent = 'Saved to cloud!';
+      bar.querySelector('.sync-bar-actions').style.display = 'none';
       setTimeout(() => { updateSectionSaveButtons(); }, 1500);
+    } else {
+      updateSectionSaveButtons();
     }
   }).catch(() => {
     alert('Failed to save ' + section + '. Check your connection.');
@@ -1285,19 +1329,18 @@ function syncToCloud() {
 
 function updateSectionSaveButtons() {
   ['cookbook', 'planner', 'grocery'].forEach(section => {
+    const bar = document.getElementById('syncBar_' + section);
     const btn = document.getElementById('saveBtn_' + section);
     const undoBtn = document.getElementById('undoBtn_' + section);
-    if (btn) {
-      if (unsavedSections.has(section)) {
-        btn.style.display = 'inline-flex';
-        btn.textContent = 'Save to Cloud';
-        btn.style.background = '';
-      } else {
-        btn.style.display = 'none';
-      }
+    
+    if (bar) {
+      bar.style.display = unsavedSections.has(section) ? 'flex' : 'none';
     }
-    if (undoBtn) {
-      undoBtn.style.display = unsavedSections.has(section) ? 'inline-flex' : 'none';
+    // Keep button references working for the "Saved!" flash
+    if (btn && unsavedSections.has(section)) {
+      btn.textContent = 'Save to Cloud';
+      btn.style.background = '';
+      btn.className = 'sync-btn sync-btn-save';
     }
   });
   
