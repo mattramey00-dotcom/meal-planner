@@ -282,7 +282,13 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   background:var(--red-dim);color:var(--red);border-radius:4px;cursor:pointer;
   font-size:10px;display:none;align-items:center;justify-content:center;
 }
-.meal-slot:hover .slot-remove{display:flex}
+.slot-view{
+  position:absolute;top:4px;right:26px;width:18px;height:18px;border:none;
+  background:var(--accent-dim);border-radius:4px;cursor:pointer;
+  font-size:9px;display:none;align-items:center;justify-content:center;
+  padding:0;line-height:1;
+}
+.meal-slot:hover .slot-remove,.meal-slot:hover .slot-view{display:flex}
 .slot-empty{font-size:11px;color:var(--text3);font-style:italic}
 
 /* ===== POOL GRIDS (Breakfast/Snacks) ===== */
@@ -300,7 +306,13 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   justify-content:center;opacity:0;transition:all .15s;flex-shrink:0;
 }
 .pool-chip-remove:hover{background:var(--red-dim);color:var(--red)}
-.pool-chip:hover .pool-chip-remove{opacity:1}
+.pool-chip-view{
+  width:20px;height:20px;border:none;background:var(--surface2);
+  border-radius:4px;cursor:pointer;font-size:9px;display:flex;align-items:center;
+  justify-content:center;opacity:0;transition:all .15s;flex-shrink:0;padding:0;line-height:1;
+}
+.pool-chip-view:hover{background:var(--accent-dim)}
+.pool-chip:hover .pool-chip-remove,.pool-chip:hover .pool-chip-view{opacity:1}
 .pool-empty{
   padding:24px;text-align:center;color:var(--text3);font-size:12px;
   border:1px dashed var(--border);border-radius:var(--radius-sm);width:100%;
@@ -553,6 +565,8 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
   .form-row-2{grid-template-columns:1fr}
   .planner-header,.grocery-header{flex-direction:column;align-items:stretch;text-align:center}
   .brand h1{font-size:20px}
+  .slot-remove,.slot-view{display:flex}
+  .pool-chip-remove,.pool-chip-view{opacity:1}
 }
 </style>
 </head>
@@ -1598,6 +1612,70 @@ function deleteMeal(id) {
 // ============================================================
 //  MEAL MODAL (Add / Edit)
 // ============================================================
+function viewRecipe(mealId) {
+  const meal = state.meals.find(m => m.id === mealId);
+  if (!meal) return;
+
+  const types = (meal.mealTypes||[]).map(mt => {
+    const t = MEAL_TYPES.find(x => x.id === mt);
+    return t ? `<span class="tag ${t.cls}">${t.label}</span>` : '';
+  }).join('');
+
+  const cats = (meal.categories||[]).map(c => {
+    const cat = CATEGORIES.find(x => x.id === c);
+    return cat ? `<span class="tag ${cat.cls}">${cat.icon} ${cat.label}</span>` : '';
+  }).join('');
+
+  const ings = (meal.ingredients||[]).filter(Boolean);
+  const ingHTML = ings.length > 0 
+    ? `<div style="margin-top:14px">
+        <label style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Ingredients (${ings.length})</label>
+        <ul style="list-style:none;padding:0;margin:8px 0">
+          ${ings.map(ing => `<li style="padding:6px 0;border-bottom:1px solid var(--surface2);font-size:13px;display:flex;align-items:center;gap:8px">
+            <span style="color:var(--accent);font-weight:bold">•</span> ${ing}
+          </li>`).join('')}
+        </ul>
+      </div>` 
+    : '<div style="margin-top:14px;font-size:12px;color:var(--text3);font-style:italic">No ingredients listed yet</div>';
+
+  const recipeHTML = meal.recipe 
+    ? `<div style="margin-top:14px">
+        <label style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Instructions</label>
+        <div style="margin-top:8px;font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--text2);background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">${meal.recipe}</div>
+      </div>` 
+    : '';
+
+  const container = document.getElementById('modalContainer');
+  container.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px">
+          <h2 style="margin:0">${meal.name}</h2>
+          <button class="btn btn-sm btn-secondary" onclick="closeModal();openMealModal('${meal.id}')" style="white-space:nowrap;flex-shrink:0">✏️ Edit</button>
+        </div>
+        
+        ${meal.description ? `<div style="font-size:13px;color:var(--text2);margin-bottom:10px">${meal.description}</div>` : ''}
+        
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">
+          ${types}
+          ${cats}
+          ${meal.isSide ? '<span class="tag" style="background:var(--green-dim);color:var(--green)">Side Dish</span>' : ''}
+          ${meal.prepTime ? `<span class="tag" style="background:var(--surface3);color:var(--text3)">⏱ ${meal.prepTime} min</span>` : ''}
+          ${meal.servings ? `<span class="tag" style="background:var(--surface3);color:var(--text3)">👥 ${meal.servings} servings</span>` : ''}
+          ${meal.defaultSide ? `<span class="tag" style="background:var(--surface3);color:var(--text3)">🥗 Default side: ${meal.defaultSide}</span>` : ''}
+        </div>
+
+        ${ingHTML}
+        ${recipeHTML}
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function openMealModal(editId) {
   const meal = editId ? state.meals.find(m => m.id === editId) : null;
   const isEdit = !!meal;
@@ -1851,6 +1929,7 @@ function renderDinnerSlot(key, meal) {
     return `<div class="meal-slot filled" data-key="${key}" draggable="true" 
                 ondragstart="dragMealId=null;dragSource='${key}'" onclick="openSlotPicker('${key}','dinner')">
       <button class="slot-remove" onclick="event.stopPropagation();removeSlot('${key}')">×</button>
+      <button class="slot-view" onclick="event.stopPropagation();viewRecipe('${meal.id}')" title="View recipe">📋</button>
       <div class="slot-meal">${meal.name}</div>
       ${sideDisplay}
     </div>`;
@@ -1878,6 +1957,7 @@ function renderPool(type, containerId) {
     return `<div class="pool-chip">
       <div class="pool-chip-name">${meal.name}</div>
       ${meal.prepTime ? `<span style="font-size:10px;color:var(--text3)">${meal.prepTime}m</span>` : ''}
+      <button class="pool-chip-view" onclick="viewRecipe('${meal.id}')" title="View recipe">📋</button>
       <button class="pool-chip-remove" onclick="removeFromPool('${type}',${i})">×</button>
     </div>`;
   }).join('');
