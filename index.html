@@ -291,6 +291,31 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
 .meal-slot:hover .slot-remove,.meal-slot:hover .slot-view{display:flex}
 .slot-empty{font-size:11px;color:var(--text3);font-style:italic}
 
+/* Meal action buttons row */
+.slot-actions{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.slot-act-btn{
+  font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:4px;
+  background:var(--surface);cursor:pointer;color:var(--text3);transition:all .15s;
+  font-family:'DM Sans',system-ui,sans-serif;white-space:nowrap;
+}
+.slot-act-btn:hover{background:var(--surface2);color:var(--text)}
+.slot-act-btn.eaten{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.meal-slot.is-eaten{opacity:0.5;background:var(--green-dim)}
+.meal-slot.is-eaten .slot-meal{text-decoration:line-through}
+
+/* Rollover bank */
+.rollover-chip{
+  background:var(--surface);border:1.5px solid var(--amber);border-radius:var(--radius-sm);
+  padding:10px 14px;display:flex;align-items:center;gap:10px;
+  cursor:default;transition:all .2s;position:relative;min-width:140px;
+}
+.rollover-chip:hover{box-shadow:var(--shadow)}
+.rollover-chip-name{font-size:13px;font-weight:500;flex:1}
+.rollover-warning{
+  font-size:9px;color:var(--red);font-weight:600;background:var(--red-dim);
+  padding:2px 6px;border-radius:3px;white-space:nowrap;
+}
+
 /* ===== POOL GRIDS (Breakfast/Snacks) ===== */
 .pool-grid{display:flex;flex-wrap:wrap;gap:10px}
 .pool-chip{
@@ -676,6 +701,16 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bot
         <button id="saveBtn_planner" class="sync-btn sync-btn-save" onclick="syncSectionToCloud('planner')" title="Push your planner changes to the cloud so other devices can see them">Save to Cloud</button>
         <button id="undoBtn_planner" class="sync-btn sync-btn-undo" onclick="revertSection('planner')" title="Discard your changes and restore the last version saved to the cloud">Undo Changes</button>
       </div>
+    </div>
+
+    <!-- ROLLOVER BANK -->
+    <div id="rolloverBankSection" style="margin-bottom:28px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <h3 style="font-size:15px;font-weight:400;letter-spacing:-0.2px">🔁 Meals Rolled Over (didn't get eaten)</h3>
+        <button class="btn btn-sm btn-secondary" onclick="clearRolloverBank()" style="color:var(--red)">Clear All</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">These meals were sent to next week. Auto-generate will prioritize them first.</div>
+      <div id="rolloverBankList" class="pool-grid"></div>
     </div>
 
     <!-- DINNER GRID -->
@@ -1143,6 +1178,8 @@ function applySectionData(section, remoteData) {
     if (fixed.history) state.history = Array.isArray(fixed.history) ? fixed.history : Object.values(fixed.history);
   } else if (section === 'planner') {
     if (fixed.weekPlan) state.weekPlan = fixed.weekPlan;
+    if (fixed.eatenMeals) state.eatenMeals = Array.isArray(fixed.eatenMeals) ? fixed.eatenMeals : Object.values(fixed.eatenMeals);
+    if (fixed.rolloverBank) state.rolloverBank = Array.isArray(fixed.rolloverBank) ? fixed.rolloverBank : Object.values(fixed.rolloverBank);
   } else if (section === 'grocery') {
     if (fixed.groceryList) state.groceryList = Array.isArray(fixed.groceryList) ? fixed.groceryList : Object.values(fixed.groceryList);
     if (fixed.groceryChecked) state.groceryChecked = fixed.groceryChecked;
@@ -1267,6 +1304,8 @@ function loadState() {
       if (parsed.miscFoodItems && !Array.isArray(parsed.miscFoodItems)) parsed.miscFoodItems = Object.values(parsed.miscFoodItems);
       if (parsed.blockedPairings && !Array.isArray(parsed.blockedPairings)) parsed.blockedPairings = Object.values(parsed.blockedPairings);
       if (parsed.purchaseHistory && !Array.isArray(parsed.purchaseHistory)) parsed.purchaseHistory = Object.values(parsed.purchaseHistory);
+      if (parsed.eatenMeals && !Array.isArray(parsed.eatenMeals)) parsed.eatenMeals = Object.values(parsed.eatenMeals);
+      if (parsed.rolloverBank && !Array.isArray(parsed.rolloverBank)) parsed.rolloverBank = Object.values(parsed.rolloverBank);
       if (Array.isArray(parsed.meals)) {
         parsed.meals = parsed.meals.map(m => {
           if (m.categories && !Array.isArray(m.categories)) m.categories = Object.values(m.categories);
@@ -1278,7 +1317,7 @@ function loadState() {
       return parsed;
     }
   } catch(e) {}
-  return { meals: [], weekPlan: {}, groceryList: [], groceryChecked: {}, history: [] };
+  return { meals: [], weekPlan: {}, groceryList: [], groceryChecked: {}, history: [], eatenMeals: [], rolloverBank: [] };
 }
 
 let unsavedSections = new Set(); // tracks which sections have unsaved changes: 'cookbook', 'planner', 'grocery'
@@ -1313,7 +1352,7 @@ function getSectionData(section) {
   if (section === 'cookbook') {
     return { meals: state.meals, history: state.history || [] };
   } else if (section === 'planner') {
-    return { weekPlan: state.weekPlan };
+    return { weekPlan: state.weekPlan, eatenMeals: state.eatenMeals || [], rolloverBank: state.rolloverBank || [] };
   } else if (section === 'grocery') {
     return { 
       groceryList: state.groceryList || [], 
@@ -1903,6 +1942,8 @@ function renderPlanner() {
     });
   });
 
+  // --- ROLLOVER BANK ---
+  renderRolloverBank();
   // --- BREAKFAST POOL ---
   renderPool('breakfast', 'breakfastPool');
   // --- SNACK POOL ---
@@ -1926,12 +1967,19 @@ function renderDinnerSlot(key, meal) {
       </div>` : 
       (meal.isSide ? '' : `<div class="slot-side"><button class="add-side-btn" onclick="event.stopPropagation();openSideSwapper('${key}')">+ Add Side</button></div>`);
     
-    return `<div class="meal-slot filled" data-key="${key}" draggable="true" 
+    const isEaten = (state.eatenMeals || []).includes(key);
+    
+    return `<div class="meal-slot filled ${isEaten ? 'is-eaten' : ''}" data-key="${key}" draggable="true" 
                 ondragstart="dragMealId=null;dragSource='${key}'" onclick="openSlotPicker('${key}','dinner')">
       <button class="slot-remove" onclick="event.stopPropagation();removeSlot('${key}')">×</button>
       <button class="slot-view" onclick="event.stopPropagation();viewRecipe('${meal.id}')" title="View recipe">📋</button>
       <div class="slot-meal">${meal.name}</div>
       ${sideDisplay}
+      <div class="slot-actions" onclick="event.stopPropagation()">
+        <button class="slot-act-btn ${isEaten ? 'eaten' : ''}" onclick="toggleEaten('${key}')">${isEaten ? '✓ Eaten' : '☐ Mark Eaten'}</button>
+        <button class="slot-act-btn" onclick="openMoveMeal('${key}')">↔ Move</button>
+        ${!isEaten ? `<button class="slot-act-btn" onclick="sendToNextWeek('${key}')">→ Next Week</button>` : ''}
+      </div>
     </div>`;
   }
   return `<div class="meal-slot" data-key="${key}" onclick="openSlotPicker('${key}','dinner')">
@@ -2272,6 +2320,198 @@ function randomSide(slotKey) {
 // ============================================================
 //  AUTO-GENERATE
 // ============================================================
+// ============================================================
+//  EATEN / MOVE / ROLLOVER BANK
+// ============================================================
+function toggleEaten(key) {
+  if (!state.eatenMeals) state.eatenMeals = [];
+  const idx = state.eatenMeals.indexOf(key);
+  if (idx >= 0) state.eatenMeals.splice(idx, 1);
+  else state.eatenMeals.push(key);
+  saveState();
+  renderPlanner();
+}
+
+function openMoveMeal(fromKey) {
+  const mealId = state.weekPlan[fromKey];
+  const meal = state.meals.find(m => m.id === mealId);
+  if (!meal) return;
+  const fromDayIdx = parseInt(fromKey);
+  
+  const container = document.getElementById('modalContainer');
+  container.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal" style="max-width:360px">
+        <h2>Move "${meal.name}"</h2>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Select a day to move this meal to:</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${DAYS.map((day, di) => {
+            if (di === fromDayIdx) return '';
+            const existingId = state.weekPlan[`${di}_dinner`];
+            const existing = existingId ? state.meals.find(m => m.id === existingId) : null;
+            return `<button class="btn btn-secondary" style="text-align:left;padding:12px 16px" onclick="moveMeal('${fromKey}','${di}_dinner')">
+              <strong>${day}</strong>${existing ? ` <span style="font-size:11px;color:var(--text3)">— swap with ${existing.name}</span>` : ` <span style="font-size:11px;color:var(--text3)">— empty</span>`}
+            </button>`;
+          }).join('')}
+        </div>
+        <div style="margin-top:16px;text-align:right">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function moveMeal(fromKey, toKey) {
+  const fromMeal = state.weekPlan[fromKey];
+  const fromSide = state.weekPlan[fromKey + '_side'];
+  const toMeal = state.weekPlan[toKey];
+  const toSide = state.weekPlan[toKey + '_side'];
+  
+  // Swap
+  if (toMeal) {
+    state.weekPlan[fromKey] = toMeal;
+    state.weekPlan[fromKey + '_side'] = toSide || '';
+  } else {
+    delete state.weekPlan[fromKey];
+    delete state.weekPlan[fromKey + '_side'];
+  }
+  state.weekPlan[toKey] = fromMeal;
+  state.weekPlan[toKey + '_side'] = fromSide || '';
+  
+  // Move eaten status too
+  if (state.eatenMeals) {
+    const fromEaten = state.eatenMeals.indexOf(fromKey);
+    const toEaten = state.eatenMeals.indexOf(toKey);
+    if (fromEaten >= 0) { state.eatenMeals.splice(fromEaten, 1); state.eatenMeals.push(toKey); }
+    if (toEaten >= 0) { state.eatenMeals.splice(toEaten, 1); state.eatenMeals.push(fromKey); }
+  }
+  
+  saveState();
+  renderPlanner();
+  closeModal();
+}
+
+function sendToNextWeek(key) {
+  const mealId = state.weekPlan[key];
+  const sideName = state.weekPlan[key + '_side'] || '';
+  const meal = state.meals.find(m => m.id === mealId);
+  if (!meal) return;
+  
+  if (!state.rolloverBank) state.rolloverBank = [];
+  
+  // Check if already in bank
+  if (state.rolloverBank.some(r => r.mealId === mealId)) {
+    alert(`"${meal.name}" is already in the rollover bank.`);
+    return;
+  }
+  
+  state.rolloverBank.push({
+    mealId: mealId,
+    sideName: sideName,
+    addedDate: new Date().toISOString(),
+    rollovers: 1
+  });
+  
+  // Remove from current day
+  delete state.weekPlan[key];
+  delete state.weekPlan[key + '_side'];
+  if (state.eatenMeals) {
+    const idx = state.eatenMeals.indexOf(key);
+    if (idx >= 0) state.eatenMeals.splice(idx, 1);
+  }
+  
+  saveState();
+  renderPlanner();
+}
+
+function renderRolloverBank() {
+  const section = document.getElementById('rolloverBankSection');
+  const list = document.getElementById('rolloverBankList');
+  if (!state.rolloverBank || state.rolloverBank.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  
+  const now = new Date();
+  list.innerHTML = state.rolloverBank.map((item, i) => {
+    const meal = state.meals.find(m => m.id === item.mealId);
+    if (!meal) return '';
+    
+    const addedDate = new Date(item.addedDate);
+    const daysSince = Math.floor((now - addedDate) / (1000 * 60 * 60 * 24));
+    const showWarning = daysSince >= 5;
+    const showUrgent = daysSince >= 7;
+    
+    return `<div class="rollover-chip">
+      <div style="flex:1">
+        <div class="rollover-chip-name">${meal.name}</div>
+        ${item.sideName ? `<div style="font-size:10px;color:var(--text3)">with ${item.sideName}</div>` : ''}
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">Added ${daysSince === 0 ? 'today' : daysSince === 1 ? 'yesterday' : daysSince + ' days ago'}${item.rollovers > 1 ? ` · Rolled over ${item.rollovers}x` : ''}</div>
+        ${showWarning ? `<div class="rollover-warning" style="${showUrgent ? 'background:var(--red);color:white' : ''}">${showUrgent ? '⚠️ Ingredients likely expired!' : '⚠️ Ingredients may expire soon'}</div>` : ''}
+      </div>
+      <button class="slot-act-btn" onclick="addRolloverToDay(${i})" title="Add to a day">📅 Assign</button>
+      <button class="pool-chip-remove" style="opacity:1" onclick="removeRollover(${i})">×</button>
+    </div>`;
+  }).join('');
+}
+
+function addRolloverToDay(rolloverIdx) {
+  const item = state.rolloverBank[rolloverIdx];
+  if (!item) return;
+  const meal = state.meals.find(m => m.id === item.mealId);
+  if (!meal) return;
+  
+  const container = document.getElementById('modalContainer');
+  container.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal" style="max-width:360px">
+        <h2>Assign "${meal.name}" to a Day</h2>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+          ${DAYS.map((day, di) => {
+            const existingId = state.weekPlan[`${di}_dinner`];
+            const existing = existingId ? state.meals.find(m => m.id === existingId) : null;
+            return `<button class="btn btn-secondary" style="text-align:left;padding:12px 16px" onclick="assignRollover(${rolloverIdx},'${di}_dinner')">
+              <strong>${day}</strong>${existing ? ` <span style="font-size:11px;color:var(--text3)">— replace ${existing.name}</span>` : ` <span style="font-size:11px;color:var(--text3)">— empty</span>`}
+            </button>`;
+          }).join('')}
+        </div>
+        <div style="margin-top:16px;text-align:right">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function assignRollover(rolloverIdx, dayKey) {
+  const item = state.rolloverBank[rolloverIdx];
+  if (!item) return;
+  
+  state.weekPlan[dayKey] = item.mealId;
+  if (item.sideName) state.weekPlan[dayKey + '_side'] = item.sideName;
+  
+  state.rolloverBank.splice(rolloverIdx, 1);
+  saveState();
+  renderPlanner();
+  closeModal();
+}
+
+function removeRollover(idx) {
+  if (!state.rolloverBank) return;
+  state.rolloverBank.splice(idx, 1);
+  saveState();
+  renderPlanner();
+}
+
+function clearRolloverBank() {
+  if (!confirm('Remove all rolled-over meals?')) return;
+  state.rolloverBank = [];
+  saveState();
+  renderPlanner();
+}
+
 function autoGenerate() {
   const dinnerMeals = state.meals.filter(m => !m.isSide && ((m.mealTypes||[]).includes('dinner') || !(m.mealTypes||[]).length));
   if (dinnerMeals.length < 3) {
@@ -2315,24 +2555,56 @@ function autoGenerate() {
   const usedThisWeek = [];
   let lastSide = '';
 
-  // Generate dinners for each day
+  // Pull from rollover bank first
+  const rolloverMeals = (state.rolloverBank || []).slice();
+  const usedRollovers = [];
+
+  // Generate dinners for each day — prioritize rollover bank
   DAYS.forEach((day, di) => {
     const key = `${di}_dinner`;
-    const pick = pickRandom(dinnerMeals, usedThisWeek);
+    let pick = null;
+    let side = '';
+    
+    // Try rollover bank first
+    const rolloverIdx = rolloverMeals.findIndex(r => !usedRollovers.includes(r.mealId));
+    if (rolloverIdx >= 0) {
+      const rollover = rolloverMeals[rolloverIdx];
+      pick = state.meals.find(m => m.id === rollover.mealId);
+      if (pick) {
+        side = rollover.sideName || '';
+        usedRollovers.push(rollover.mealId);
+        rolloverMeals.splice(rolloverIdx, 1);
+      }
+    }
+    
+    // Otherwise pick from cookbook
+    if (!pick) {
+      pick = pickRandom(dinnerMeals, usedThisWeek);
+    }
+    
     if (pick) {
       newPlan[key] = pick.id;
       usedThisWeek.push(pick.id);
       
-      if (pick.defaultSide && !isPairingBlocked(pick.name, pick.defaultSide)) {
+      if (side) {
+        newPlan[key + '_side'] = side;
+        lastSide = side;
+      } else if (pick.defaultSide && !isPairingBlocked(pick.name, pick.defaultSide)) {
         newPlan[key + '_side'] = pick.defaultSide;
         lastSide = pick.defaultSide;
       } else if (allSideNames.length > 0) {
-        const side = pickRandomSide(lastSide, pick.name);
-        newPlan[key + '_side'] = side;
-        lastSide = side;
+        const s = pickRandomSide(lastSide, pick.name);
+        newPlan[key + '_side'] = s;
+        lastSide = s;
       }
     }
   });
+
+  // Remove used rollovers from the bank, increment rollover count for remaining
+  if (state.rolloverBank) {
+    state.rolloverBank = state.rolloverBank.filter(r => !usedRollovers.includes(r.mealId));
+    state.rolloverBank.forEach(r => r.rollovers = (r.rollovers || 1) + 1);
+  }
 
   // Auto-fill breakfast pool if empty
   if (existingBreakfast.length > 0) {
@@ -2372,6 +2644,7 @@ function autoGenerate() {
   }
 
   state.weekPlan = newPlan;
+  state.eatenMeals = [];
   saveState();
   renderPlanner();
 }
@@ -2379,6 +2652,7 @@ function autoGenerate() {
 function clearWeek() {
   if (!confirm('Clear the entire week including breakfast, snacks & fruit selections?')) return;
   state.weekPlan = {};
+  state.eatenMeals = [];
   saveState();
   renderPlanner();
 }
